@@ -1,0 +1,32 @@
+---
+title: "Rating curve analysis"
+---
+```{r, echo=FALSE,warning=FALSE}
+if(length(plotratingcurve1())!=0){
+title1='Model 1'
+}else{
+    title1=''
+}
+```
+
+## `r title1`
+```{r,echo=FALSE,warning=FALSE}
+for(i in 1:length(plotratingcurve1())){
+        print(plotratingcurve1()[[i]])
+}
+```
+
+```{r, echo=FALSE,warning=FALSE}
+if(length(plotratingcurve2())!=0){
+title2='Model 2'
+}else{
+    title2=''
+}
+```
+
+## `r title2`
+```{r,echo=FALSE,warning=FALSE}
+for(i in 1:length(plotratingcurve2())){
+        print(plotratingcurve2()[[i]])
+}
+```
