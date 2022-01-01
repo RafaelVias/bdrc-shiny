@@ -1,0 +1,13 @@
+name: bdrc
+title: bdrc
+username:
+account: bdrc
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4020063
+bundleId: 5046572
+url: https://bdrc.shinyapps.io/bdrc/
+when: 1631976482.28176
+lastSyncTime: 1631976482.28177
+asMultiple: FALSE
+asStatic: FALSE
