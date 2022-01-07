@@ -54,23 +54,23 @@ shinyServer(function(input, output) {
       dummy=as.data.frame(reactiveValuesToList(dummy))
       force=as.data.frame(reactiveValuesToList(force))
 
-      rc_fig <- autoplot( model ) + coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
-      if(any(dim(dummy))){
-        rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
-      }
-      if(any(dim(force))){
-        rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
-      }
+      rc_fig <- autoplot( model ) #+ coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
+      # if(any(dim(dummy))){
+      #   rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
+      # }
+      # if(any(dim(force))){
+      #   rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+      # }
       output_fig$rc_fig <- rc_fig
       
-      panel_fig <- autoplot( model , type = 'panel', transformed = T )
+      panel_fig <- plot( model , type = 'panel', transformed = T )
       output_fig$panel_fig <- panel_fig
       
       return(output_fig)
     })
     
     output$debug <- renderPrint({
-      
+      class(rc_model())
     })
     
     output$rc_fig <- renderPlot({
