@@ -1,14 +1,11 @@
-suppressPackageStartupMessages(library(doParallel))
 suppressPackageStartupMessages(library(googleVis))
 library(bdrc)
 library(ggplot2)
 library(readxl)
 library(Cairo)
-library(rmarkdown)
-
+library(grid)
 
 options(shiny.usecairo=T)
-
 
 vals<-reactiveValues(keeprows=NULL)
 daterange=reactiveValues(keeprows=NULL)
@@ -68,19 +65,38 @@ shinyServer(function(input, output) {
       
       return(output_fig)
     })
-    
+    #### TAB 1 - Figures
     output$debug <- renderPrint({
       class(rc_model())
     })
     
     output$rc_fig <- renderPlot({
-      fig_list()$rc_fig
+      dummy=as.data.frame(reactiveValuesToList(dummy))
+      force=as.data.frame(reactiveValuesToList(force))
+      
+      rc_fig <- autoplot( rc_model() ) #+ coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
+      # if(any(dim(dummy))){
+      #   rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
+      # }
+      # if(any(dim(force))){
+      #   rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+      # }
+      rc_fig
     })
-    
+
     output$rc_panel <- renderPlot({
-      fig_list()$panel_fig
+      plot(rc_model(),type = 'panel', transformed = T )
     })
-    
+    #### TAB 2 - Tables
+    output$rc_table <- renderGvis({
+      gvisTable(as.data.frame(predict(rc_model(),wide=T)),options=list(
+                                         page='enable',
+                                         pageSize=30,
+                                        width=550
+                                     ))
+    })
+
+    #### TAB 3 - Convergence diagnostics
     
     # 
     # ## MODEL1 ##  Begin
