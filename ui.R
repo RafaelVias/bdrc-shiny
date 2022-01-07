@@ -47,7 +47,9 @@ dashboardPage(skin = 'black',
                                          textOutput('debug'),
                                          plotOutput('rc_fig'),
                                          plotOutput('rc_panel')),
-                                tabPanel('Tables',uiOutput('rc_table')),
+                                tabPanel('Tables',
+                                         #title('dsfsdf')?
+                                         uiOutput('rc_table')),
                                #  tabPanel('Convergence Diagnostics',uiOutput('plots3')
                                 
                             ),
