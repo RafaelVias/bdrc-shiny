@@ -27,9 +27,10 @@ dashboardPage(skin = 'black',
                                                                                      class = "dropdown")),
     dashboardSidebar(
         sidebarMenu(
-        menuItem("Rating Curve Builder", icon = icon("line-chart"), tabName = "app"),
-        menuItem("Optimized Rating Curve", tabName = "tournament", icon = icon("gamepad")),
-        menuItem("About", tabName = "about", icon = icon("info-circle"))
+        menuItem("Rating Curve Builder", icon = icon("water"), tabName = "app"),
+        #menuItem("Optimized Rating Curve", tabName = "tournament", icon = icon("gamepad")),
+        menuItem("Instructions", tabName = "instructions", icon = icon("life-ring")),
+        menuItem("Method", tabName = "about", icon = icon("book"))
         )
     ),
     dashboardBody(tags$style(js),tags$style(js_box),tags$style(js_button),tags$style(js_background),
@@ -48,11 +49,12 @@ dashboardPage(skin = 'black',
                                          plotOutput('rc_fig'),
                                          plotOutput('rc_panel')),
                                 tabPanel('Tables',
-                                         #title('dsfsdf')?
-                                         uiOutput('rc_table'))
-                               #  ,tabPanel('Convergence Diagnostics',uiOutput('plots3')
-                                
-                            ),
+                                         #h4(textOutput("tab_header")), 
+                                         plotOutput('param_sum'),
+                                         plotOutput('rc_table')),
+                                tabPanel('Convergence diagnostics',
+                                         plotOutput('conv_diag1'),
+                                         plotOutput('conv_diag2'))),
             
                             tagList(
                                 tags$head(
@@ -100,7 +102,6 @@ dashboardPage(skin = 'black',
             ),
             tabItem(tabName="tournament",
                     fluidRow(
-                    
                       
                       
                       column(width = 12, 

@@ -4,6 +4,7 @@ library(ggplot2)
 library(readxl)
 library(Cairo)
 library(grid)
+library(gridExtra)
 
 options(shiny.usecairo=T)
 
@@ -14,8 +15,10 @@ ranges2 <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
 
+
 shinyServer(function(input, output) {
     
+    ## data import ##
     data <- eventReactive(input$go,{
         if(is.null(input$file)){
             return(NULL)
@@ -43,62 +46,136 @@ shinyServer(function(input, output) {
           return(rc.fit)
         })
     })
-
-    fig_list <- reactive({
-      
-      model <- rc_model()
-      output_fig <- list()
-      dummy=as.data.frame(reactiveValuesToList(dummy))
-      force=as.data.frame(reactiveValuesToList(force))
-
-      rc_fig <- autoplot( model ) #+ coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
-      # if(any(dim(dummy))){
-      #   rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
-      # }
-      # if(any(dim(force))){
-      #   rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
-      # }
-      output_fig$rc_fig <- rc_fig
-      
-      panel_fig <- plot( model , type = 'panel', transformed = T )
-      output_fig$panel_fig <- panel_fig
-      
-      return(output_fig)
-    })
+    
+    ## create headers ##
+    # headers <- eventReactive(input$go,{
+    #   head_list <- list()
+    #   head_list$tab_head <- paste('The Rating Curve on a Tableu Format')
+    #   return(head_list)
+    # })
+    
+    # output$tab_header <- renderText({
+    #   headers()$tab_head
+    # })
+    
     #### TAB 1 - Figures
-    output$debug <- renderPrint({
-      class(rc_model())
-    })
+    # output$debug <- renderPrint({
+    #   print(isolate(m_class$m_class))
+    # })
     
     output$rc_fig <- renderPlot({
       dummy=as.data.frame(reactiveValuesToList(dummy))
       force=as.data.frame(reactiveValuesToList(force))
       
-      rc_fig <- autoplot( rc_model() ) #+ coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
-      # if(any(dim(dummy))){
-      #   rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
-      # }
-      # if(any(dim(force))){
-      #   rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
-      # }
+      rc_fig <- autoplot( rc_model(), title='Rating Curve') + coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
+      if(any(dim(dummy))){
+        rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
+      }
+      if(any(dim(force))){
+        rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+      }
       rc_fig
-    })
+    }#,height=400,width=500
+    )
 
     output$rc_panel <- renderPlot({
-      plot(rc_model(),type = 'panel', transformed = T )
-    })
+      trans_rc <- autoplot( rc_model(), transformed=T, title= 'Log-transformed Rating Curve')
+      resid <- autoplot( rc_model(), type='residuals', title= 'Residual Plot')
+      f_h <- autoplot( rc_model(), type='f', title= 'Power-law Exponent')
+      sigma_eps <- autoplot( rc_model(), type='sigma_eps', title= 'Residual Standard Deviation')
+      grid.arrange(trans_rc,resid,f_h,sigma_eps, ncol=2)
+    }#,height=500,width=500
+    )
+    
     #### TAB 2 - Tables
-    output$rc_table <- renderGvis({
-      gvisTable(as.data.frame(predict(rc_model(),wide=T)),options=list(
-                                         page='enable',
-                                         pageSize=30,
-                                        width=550
-                                     ))
+    output$param_sum <- renderPlot({
+      m <- rc_model()
+      param <- get_param_names(class(m),m$run_info$c_param)
+      table <- m$param_summary[,c('lower','median','upper')]
+      names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+      row.names(table) <- sapply(1:length(param),get_param_expression)
+      table <- format(round(table,digits=3),nsmall=3)
+      param_sum <- arrangeGrob(tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE)))),
+                               as.table=TRUE,
+                               top=textGrob('Parameter Summary Table',gp=gpar(fontsize=22,facetype='bold')))
+      grid.arrange(param_sum)
     })
+    
+    output$rc_table <- renderPlot({
+      p_mat <- tableGrob(format(round(predict(rc_model(),wide=T),digits=3),nsmall=3),
+                         theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
+                                              colhead=list(fg_params=list(col="black",fontface=2L)),
+                                              rowhead=list(fg_params=list(col="black",fontface=2L)),
+                                              base_size = 13))
+      grid.arrange(arrangeGrob(p_mat,
+                    as.table=TRUE,
+                    top=textGrob(paste0('Tabular Rating Curve'),gp=gpar(fontsize=22,facetype='bold'))),as.table=TRUE)
+    })
+    
 
     #### TAB 3 - Convergence diagnostics
+    output$conv_diag1 <- renderPlot({
+      r_hat <- autoplot(rc_model(), type='r_hat')
+      auto <- autoplot(rc_model(), type='autocorrelation')
+      grid.arrange(r_hat,auto,ncol=1)
+    })
     
-    # 
+    
+    # height_vec <- list('plm0'=500,'plm'=1000,'gplm0'=750,'gplm'=1500)
+    # trace_plot_height <- height_vec[isolate(m_class$m_class)]
+    
+    output$conv_diag2 <- renderPlot({
+      autoplot(rc_model(), type='trace') + 
+        facet_wrap( ~name_expr, scales='free', labeller = label_parsed, ncol=1)
+    },height = 1000)
+    
+    
+    ### Help functions ###
+    get_param_names <- function(model,c_param){
+      if(model=='plm0'){
+        hyper_param <- 'sigma_eps'
+      }else if(model=='plm'){
+        hyper_param <- c('sigma_eta',paste('eta',1:6,sep='_'))
+      }else if(model=='gplm0'){
+        hyper_param <- c('sigma_eps','sigma_beta','phi_beta')
+      }else if(model=='gplm'){
+        hyper_param <- c('sigma_beta','phi_beta','sigma_eta',paste('eta',1:6,sep='_'))
+      }
+      if(is.null(c_param)){
+        hyper_param <- c('c',hyper_param)
+      }
+      latent_param <- c('a','b')
+      return(c(latent_param,hyper_param))
+    }
+    get_param_expression <- function(param){
+      expr_vec <- c('a'='a','b'='b','c'='c','sigma_eps'='sigma[epsilon]',
+                    'sigma_beta'='sigma[beta]','phi_beta'='phi[beta]',
+                    'sigma_eta'='sigma[eta]','eta_1'='eta[1]','eta_2'='eta[2]',
+                    'eta_3'='eta[3]','eta_4'='eta[4]','eta_5'='eta[5]',
+                    'eta_6'='eta[6]','log(a)'='log(a)','log(h_min-c)'='log(h[min]-c)',
+                    '2log(sigma_eps)'='log(sigma[epsilon]^2)',
+                    'log(sigma_beta)'='log(sigma[beta])',
+                    'log(phi_beta)'='log(phi[beta])',
+                    'log(sigma_eta)'='log(sigma[eta])',
+                    'z_1'='z[1]','z_2'='z[2]','z_3'='z[3]',
+                    'z_4'='z[4]','z_5'='z[5]','z_6'='z[6]')
+      param_expr <- expr_vec[param]
+      if(any(is.na(param_expr))){
+        stop('param not found')
+      }
+      return(param_expr)
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     # ## MODEL1 ##  Begin
     # model1 <- eventReactive(input$go,{
     #     if("gen" %in% input$checkbox2){
