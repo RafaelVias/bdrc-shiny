@@ -16,21 +16,34 @@ js_background <- ".content {background-color: #FFFFFF;}"
 
 dashboardPage(skin = 'black',
               
-    dashboardHeader(title='Bayesian Rating Curve', 
+    dashboardHeader(title = span(#span("P(",
+                                 #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
+                                 span("Bayesian",
+                                      style = 'font-family: "Georgia"; color: #1a3263; font-size: 28px'),
+                                 span("|",
+                                      style = 'font-family: "Times"; color: gray; font-size: 28px'),
+                                 span("Rating Curves",
+                                      style = 'font-family: "Georgia"; color: #913535; font-size: 28px')#,
+                                 #span(")",
+                                 #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
+                                 ),
+                    titleWidth = 335,
                     tags$li(a(href = 'https://github.com/sor16/bdrc',
-                                                            icon("github"),
-                                                            title = "Back to Apps Home"),
-                                                            class = "dropdown"),tags$li(a(href = '',
-                                                                                        tags$img(src = 'logo.png',
-                                                                                           title = "Company Home", height = "30px"),
-                                                                                       style = "padding-top:10px; padding-bottom:10px;"),
-                                                                                     class = "dropdown")),
+                              icon("github"),
+                              title = "Back to Apps Home"),
+                            class = "dropdown"),
+                    tags$li(a(href = 'https://sor16.github.io/bdrc/index.html',
+                              tags$img(src = 'logo.png',
+                                       title = "Company Home", 
+                                       height = "30px"),
+                              style = "padding-top:10px; padding-bottom:10px;"),
+                            class = "dropdown")),
     dashboardSidebar(
         sidebarMenu(
         menuItem("Rating Curve Builder", icon = icon("water"), tabName = "app"),
         #menuItem("Optimized Rating Curve", tabName = "tournament", icon = icon("gamepad")),
         menuItem("Instructions", tabName = "instructions", icon = icon("life-ring")),
-        menuItem("Method", tabName = "about", icon = icon("book"))
+        menuItem("About Method", tabName = "about", icon = icon("book"))
         )
     ),
     dashboardBody(tags$style(js),tags$style(js_box),tags$style(js_button),tags$style(js_background),
