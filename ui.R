@@ -17,16 +17,17 @@ js_button <- 'a.btn {
 js_background <- ".content {background-color: #FFFFFF;}"
 
 fluidPage(
+    withMathJax(),
     dashboardPage(skin = 'black',
                   
         dashboardHeader(title = span(#span("P(",
                                      #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
                                      span("Bayesian",
-                                          style = 'font-family: "Georgia"; color: #1a3263; font-size: 28px'),
+                                          style = 'font-family: "Georgia"; color: #913535; font-size: 28px'),
                                      span("|",
                                           style = 'font-family: "Times"; color: gray; font-size: 28px'),
                                      span("Rating Curves",
-                                          style = 'font-family: "Georgia"; color: #913535; font-size: 28px')#,
+                                          style = 'font-family: "Georgia"; color: steelblue; font-size: 28px')#,#1a3263
                                      #span(")",
                                      #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
                                      ),
@@ -65,12 +66,12 @@ fluidPage(
                                              plotOutput('rc_fig'),
                                              plotOutput('rc_panel')),
                                     tabPanel('Tables',
-                                             #h4(textOutput("tab_header")), 
-                                             plotOutput('param_sum'),
+                                             h4(textOutput("tab1_head")), 
+                                             uiOutput('param_sum'),
+                                             h4(textOutput("tab2_head")),
                                              plotOutput('rc_table')),
                                     tabPanel('Convergence diagnostics',
-                                             plotOutput('conv_diag1'),
-                                             plotOutput('conv_diag2'))),
+                                             plotOutput('conv_diag1'))),
                 
                                 tagList(
                                     tags$head(

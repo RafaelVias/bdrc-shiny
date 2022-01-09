@@ -5,6 +5,8 @@ library(readxl)
 library(Cairo)
 library(grid)
 library(gridExtra)
+library(xtable)
+library(shiny)
 
 source('help_functions.R')
 
@@ -50,15 +52,19 @@ shinyServer(function(input, output) {
     })
     
     ## create headers ##
-    # headers <- eventReactive(input$go,{
-    #   head_list <- list()
-    #   head_list$tab_head <- paste('The Rating Curve on a Tableu Format')
-    #   return(head_list)
-    # })
+    headers <- eventReactive(input$go,{
+      head_list <- list()
+      head_list$tab1_head <- paste('Parameter Summary Table')
+      head_list$tab2_head <- paste('Tabular Rating Curve')
+      return(head_list)
+    })
     
-    # output$tab_header <- renderText({
-    #   headers()$tab_head
-    # })
+    output$tab1_head <- renderText({
+      headers()$tab1_head
+    })
+    output$tab2_head <- renderText({
+      headers()$tab2_head
+    })
     
     #### TAB 1 - Figures
     # output$debug <- renderPrint({
@@ -90,28 +96,36 @@ shinyServer(function(input, output) {
     )
     
     #### TAB 2 - Tables
-    output$param_sum <- renderPlot({
+    output$param_sum <- renderUI({
       m <- rc_model()
       param <- get_param_names(class(m),m$run_info$c_param)
       table <- m$param_summary[,c('lower','median','upper')]
-      names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+      names(table) <- paste0(names(table),c('-2.5\\%','-50\\%','-97.5\\%'))
       row.names(table) <- sapply(1:length(param),get_param_expression)
       table <- format(round(table,digits=3),nsmall=3)
-      param_sum <- arrangeGrob(tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE)))),
-                               as.table=TRUE,
-                               top=textGrob('Parameter Summary Table',gp=gpar(fontsize=22,facetype='bold')))
-      grid.arrange(param_sum)
+      table <- print(xtable::xtable(as.data.frame(table)),
+            floating=FALSE, 
+            tabular.environment="array",
+            include.rownames = TRUE,
+            comment=FALSE, 
+            print.results=FALSE, 
+            sanitize.rownames.function = function(x) x,
+            sanitize.colnames.function = function(x) x)
+      tagList(
+        withMathJax(),
+        HTML(paste0("$$", table, "$$"))
+      )
     })
     
+
+    
     output$rc_table <- renderPlot({
-      p_mat <- tableGrob(format(round(predict(rc_model(),wide=T),digits=3),nsmall=3),
-                         theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
-                                              colhead=list(fg_params=list(col="black",fontface=2L)),
-                                              rowhead=list(fg_params=list(col="black",fontface=2L)),
-                                              base_size = 13))
-      grid.arrange(arrangeGrob(p_mat,
-                    as.table=TRUE,
-                    top=textGrob(paste0('Tabular Rating Curve'),gp=gpar(fontsize=22,facetype='bold'))),as.table=TRUE)
+      tg <- list(tableGrob(format(round(predict(fit1,wide=T),digits=3),nsmall=3),
+                           theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
+                                                colhead=list(fg_params=list(col="black",fontface=2L)),
+                                                rowhead=list(fg_params=list(col="black",fontface=2L)))))
+      tgt <- lapply(tg, justify, vjust="top", draw=FALSE)
+      grid.arrange(grobs=tgt, ncol=1)
     })
     
 
@@ -120,16 +134,10 @@ shinyServer(function(input, output) {
       r_hat <- autoplot(rc_model(), type='r_hat')
       auto <- autoplot(rc_model(), type='autocorrelation')
       grid.arrange(r_hat,auto,ncol=1)
-    })
+    },height = 600,width = 400)
     
     
-    # height_vec <- list('plm0'=500,'plm'=1000,'gplm0'=750,'gplm'=1500)
-    # trace_plot_height <- height_vec[isolate(m_class$m_class)]
     
-    output$conv_diag2 <- renderPlot({
-      autoplot(rc_model(), type='trace',transformed=T)# + 
-        #facet_wrap( ~name_expr, scales='free', labeller = label_parsed, ncol=1)
-    },height = 1000)
     
     # ## MODEL1 ##  Begin
     # model1 <- eventReactive(input$go,{
