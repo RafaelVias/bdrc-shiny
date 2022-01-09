@@ -56,6 +56,9 @@ shinyServer(function(input, output) {
       head_list <- list()
       head_list$tab1_head <- paste('Parameter Summary Table')
       head_list$tab2_head <- paste('Tabular Rating Curve')
+      head_list$rc_head <- paste('Rating Curve')
+      head_list$rhat_head <- paste('Gelman-Rubin Statistic Plot')
+      head_list$auto_head <- paste('Autocorrelation Plot')
       return(head_list)
     })
     
@@ -64,6 +67,15 @@ shinyServer(function(input, output) {
     })
     output$tab2_head <- renderText({
       headers()$tab2_head
+    })
+    output$rc_head <- renderText({
+      headers()$rc_head
+    })
+    output$rhat_head <- renderText({
+      headers()$rhat_head
+    })
+    output$auto_head <- renderText({
+      headers()$auto_head
     })
     
     #### TAB 1 - Figures
@@ -75,7 +87,7 @@ shinyServer(function(input, output) {
       dummy=as.data.frame(reactiveValuesToList(dummy))
       force=as.data.frame(reactiveValuesToList(force))
       
-      rc_fig <- autoplot( rc_model(), title='Rating Curve') + coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
+      rc_fig <- autoplot( rc_model()) + coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
       if(any(dim(dummy))){
         rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
       }
@@ -83,8 +95,7 @@ shinyServer(function(input, output) {
         rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
       }
       rc_fig
-    }#,height=400,width=500
-    )
+    },height=400,width=550)
 
     output$rc_panel <- renderPlot({
       trans_rc <- autoplot( rc_model(), transformed=T, title= 'Log-transformed Rating Curve')
@@ -92,8 +103,7 @@ shinyServer(function(input, output) {
       f_h <- autoplot( rc_model(), type='f', title= 'Power-law Exponent')
       sigma_eps <- autoplot( rc_model(), type='sigma_eps', title= 'Residual Standard Deviation')
       grid.arrange(trans_rc,resid,f_h,sigma_eps, ncol=2)
-    }#,height=500,width=500
-    )
+    },height=500,width=550)
     
     #### TAB 2 - Tables
     output$param_sum <- renderUI({
@@ -124,21 +134,21 @@ shinyServer(function(input, output) {
                            theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
                                                 colhead=list(fg_params=list(col="black",fontface=2L)),
                                                 rowhead=list(fg_params=list(col="black",fontface=2L)))))
-      tgt <- lapply(tg, justify, vjust="top", draw=FALSE)
+      tgt <- lapply(tg, justify, vjust="top")
       grid.arrange(grobs=tgt, ncol=1)
     })
     
 
     #### TAB 3 - Convergence diagnostics
     output$conv_diag1 <- renderPlot({
-      r_hat <- autoplot(rc_model(), type='r_hat')
-      auto <- autoplot(rc_model(), type='autocorrelation')
-      grid.arrange(r_hat,auto,ncol=1)
-    },height = 600,width = 400)
+      autoplot(rc_model(), type='r_hat') 
+    },height = 400,width = 500)
+    output$conv_diag2 <- renderPlot({
+      autoplot(rc_model(), type='autocorrelation')
+    },height = 400,width = 500)
     
     
-    
-    
+  
     # ## MODEL1 ##  Begin
     # model1 <- eventReactive(input$go,{
     #     if("gen" %in% input$checkbox2){

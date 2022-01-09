@@ -37,7 +37,7 @@ get_param_expression <- function(param){
 }
 
 
-justify <- function(x, hjust="center", vjust="center", draw=TRUE){
+justify <- function(x, hjust="center", vjust="center"){
     w <- sum(x$widths)
     h <- sum(x$heights)
     xj <- switch(hjust,
@@ -49,6 +49,5 @@ justify <- function(x, hjust="center", vjust="center", draw=TRUE){
                  bottom = 0.5*h,
                  top=unit(1,"npc") - 0.5*h)
     x$vp <- viewport(x=xj, y=yj)
-    if(draw) grid.draw(x)
     return(x)
 }

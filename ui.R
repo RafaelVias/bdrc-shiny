@@ -15,6 +15,13 @@ js_button <- 'a.btn {
     color: #000000;
 }"'
 js_background <- ".content {background-color: #FFFFFF;}"
+tab1_style <- '#tab1_head {font-size:20px; color:black; ;display:block; }'
+tab2_style <- '#tab2_head {font-size:20px; color:black; ;display:block; }'
+rc_head_style <- '#rc_head {font-size:20px; color:black; ;display:block; }'
+rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
+auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
+m_item <- ".sidebar-menu li a { font-size: 15px; }"
+#g_style <- '* {font-family: "Arial"; font-size: 12px; };'
 
 fluidPage(
     withMathJax(),
@@ -45,13 +52,20 @@ fluidPage(
         dashboardSidebar(
             sidebarMenu(
             menuItem("Rating Curve Builder", icon = icon("water"), tabName = "app"),
-            #menuItem("Optimized Rating Curve", tabName = "tournament", icon = icon("gamepad")),
             menuItem("Instructions", tabName = "instructions", icon = icon("life-ring")),
             menuItem("About Method", tabName = "about", icon = icon("book"))
             )
         ),
-        dashboardBody(tags$style(js),tags$style(js_box),tags$style(js_button),tags$style(js_background),
-           
+        dashboardBody(tags$style(js),
+                      tags$style(js_box),
+                      tags$style(js_button),
+                      tags$style(js_background),
+                      tags$style(tab1_style),
+                      tags$style(tab2_style),
+                      tags$style(m_item),
+                      tags$style(rhat_head_style),
+                      tags$style(auto_head_style),
+                      tags$style(rc_head_style),#tags$head(tags$style(g_style)),
             tabItems(
                 
                 tabItem(tabName="app",
@@ -63,6 +77,7 @@ fluidPage(
                                     
                                     tabPanel('Figures',
                                              #textOutput('debug'),
+                                             h4(textOutput("rc_head")), 
                                              plotOutput('rc_fig'),
                                              plotOutput('rc_panel')),
                                     tabPanel('Tables',
@@ -71,7 +86,10 @@ fluidPage(
                                              h4(textOutput("tab2_head")),
                                              plotOutput('rc_table')),
                                     tabPanel('Convergence diagnostics',
-                                             plotOutput('conv_diag1'))),
+                                             h4(textOutput("rhat_head")),
+                                             plotOutput('conv_diag1'),
+                                             h4(textOutput("auto_head")),
+                                             plotOutput('conv_diag2'))),
                 
                                 tagList(
                                     tags$head(
@@ -115,7 +133,8 @@ fluidPage(
                 
              
                 tabItem(tabName="about",
-                        includeMarkdown("About.md")
+                        #includeMarkdown("About.md")
+                        includeMarkdown("Method.md")
                 ),
                 tabItem(tabName="tournament",
                         fluidRow(
