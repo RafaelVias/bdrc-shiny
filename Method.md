@@ -1,25 +1,28 @@
-# bdrc - Bayesian Discharge Rating Curves <img src="man/figures/logo.png" align="right" alt="" width="140" />
+## Software <img src="man/figures/logo.png" align="right" alt="" width="140" />
 
-This Shiny app software uses the R-package `bdrc` which alows users to
-fit a discharge rating curve based on the power-law and the novel
-generalized power-law from data on paired stage and discharge
+This Shiny application uses the R-package `bdrc` (*Bayesian Discharge
+Rating Curves*). The package, which is freely available on CRAN, alows
+the user to fit a discharge rating curve based on the power-law, and the
+novel generalized power-law, from data on paired stage and discharge
 measurements in a given river using a Bayesian hierarchical model as
-described in Hrafnkelsson et al. (2021). Four models are implemented:
+described in Hrafnkelsson et al. (2021). Four models are implemented in
+the package:
 
-`plm0()` - Power-law model with a constant variance. This is a Bayesian
-hierarchical implementation of the most commonly used discharge rating
-curve model in hydrological practice.
+`plm0()` - Power-law model with a constant residual variance. This is a
+Bayesian hierarchical implementation of the most commonly used discharge
+rating curve model in hydrological practice.
 
-`plm()` - Power-law model with variance that varies with stage.
+`plm()` - Power-law model with residual variance that varies with stage.
 
-`gplm0()` - Generalized power-law model with a constant variance. The
-generalized power-law is introduced in Hrafnkelsson et al. (2020).
+`gplm0()` - Generalized power-law model with a constant residual
+variance. The generalized power-law is introduced in Hrafnkelsson et
+al. (2021).
 
-`gplm()` - Generalized power-law model with variance that varies with
-stage. The generalized power-law is introduced in Hrafnkelsson et
-al. (2020).
+`gplm()` - Generalized power-law model with residual variance that
+varies with stage. The generalized power-law is introduced in
+Hrafnkelsson et al. (2021).
 
-# About Method
+## About Method
 
 Most methods for directly measuring the discharge of a water stream are
 time-consuming and expensive. Therefore, indirect methods for measuring
@@ -119,7 +122,7 @@ hyperparameters.
 
 ## References
 
-Hrafnkelsson, B., Sigurdarson, H., Rognvaldsson, S., Jansson, A.Ö.,
+Hrafnkelsson, B., Sigurdarson, H., Rognvaldsson, S., Jansson, A.O.,
 Vias, R.D., and Gardarsson, S. M. (2021). *Generalization of the
 power-law rating curve using hydrodynamic theory and Bayesian
 hierarchical modeling*. Environmetrics (1180-4009).

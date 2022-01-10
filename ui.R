@@ -30,15 +30,15 @@ fluidPage(
         dashboardHeader(title = span(#span("P(",
                                      #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
                                      span("Bayesian",
-                                          style = 'font-family: "Georgia"; color: #913535; font-size: 28px'),
+                                          style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
                                      span("|",
                                           style = 'font-family: "Times"; color: gray; font-size: 28px'),
-                                     span("Rating Curves",
-                                          style = 'font-family: "Georgia"; color: steelblue; font-size: 28px')#,#1a3263
+                                     span("Discharge Rating Curves",
+                                          style = ' font-weight: bold; color: #4AA4DE; font-size: 28px')#,#1a3263
                                      #span(")",
                                      #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
                                      ),
-                        titleWidth = 335,
+                        titleWidth = 501,
                         tags$li(a(href = 'https://github.com/sor16/bdrc',
                                   icon("github"),
                                   title = "Back to Apps Home"),
@@ -51,9 +51,10 @@ fluidPage(
                                 class = "dropdown")),
         dashboardSidebar(
             sidebarMenu(
-            menuItem("Rating Curve Builder", icon = icon("water"), tabName = "app"),
-            menuItem("Instructions", tabName = "instructions", icon = icon("life-ring")),
-            menuItem("About Method", tabName = "about", icon = icon("book"))
+            menuItem("Rating Curve Builder", tabName = "app", icon = icon("water")),
+            menuItem("How to use the app?", tabName = "instructions", icon = icon("life-ring")),
+            menuItem("Background", tabName = "about", icon = icon("book")),
+            menuItem("Report a Bug", tabName = "bugs", icon = icon("bug"))
             )
         ),
         dashboardBody(tags$style(js),
@@ -65,7 +66,7 @@ fluidPage(
                       tags$style(m_item),
                       tags$style(rhat_head_style),
                       tags$style(auto_head_style),
-                      tags$style(rc_head_style),#tags$head(tags$style(g_style)),
+                      tags$style(rc_head_style),
             tabItems(
                 
                 tabItem(tabName="app",
@@ -134,34 +135,14 @@ fluidPage(
              
                 tabItem(tabName="about",
                         #includeMarkdown("About.md")
-                        includeMarkdown("Method.md")
+                        includeMarkdown("method.md")
                 ),
-                tabItem(tabName="tournament",
-                        fluidRow(
-                          
-                          
-                          column(width = 12, 
-                             
-                                 box(title = "Tournament",status = 'primary',
-                                     
-                              
-                                fileInput('file2', '',
-                                          accept=c('application/vnd.ms-excel',
-                                                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                                   '.xls',
-                                                   '.xlsx')),
-                                actionButton('tournament_btn',label='Run tournament',icon("paper-plane"), 
-                                             style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-                                br(),
-                                 div(class = "busy",
-                                     img(src="progress.gif")
-                                 ))
-                        
-                        )
-                        )
-                         
+                tabItem(tabName="instructions",
+                        includeMarkdown("instructions.md")
+                ),
+                tabItem(tabName="bugs",
+                        includeMarkdown("bugs.md")
                 )
-    
             )    
         )
     )
