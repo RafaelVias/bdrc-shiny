@@ -52,44 +52,25 @@ justify <- function(x, hjust="center", vjust="center"){
     return(x)
 }
 
-clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.Date(), "%Y"))),dummy=NULL,keeprows=NULL,force=NULL,shiny=FALSE,Wmin=NA,Wmax=NA, exclude=TRUE,excludedates=c(Sys.Date()-1,Sys.Date()-1)){
+clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.Date(), "%Y"))),
+                  dummy=NULL,keeprows=NULL,force=NULL,Wmin=NA,Wmax=NA, exclude=TRUE,
+                  excludedates=c(Sys.Date()-1,Sys.Date()-1)){
     
     if (is.null(file)){
         return(NULL)
     }
-    name=file
-    if(shiny==TRUE){
-        list2env(file,envir=environment())
-        
-        if(type=='text/plain'){
-            observedData=read.table(datapath,skip=2,sep="|",dec=",")
-            observedData=observedData[,c(2,3,5,7,4)]
-            names(observedData)=c("Date","Time","Quality","W","Q")
-            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
-            #else if(type=="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        }else if(type=="list"){
-            observedData = readxl::read_xlsx(path = file$datapath, sheet = 1)
-            names(observedData)=c("Date","Time","Quality","W","Q")
-            
-        }else{
-            return(NULL)
-        }
+    if(file$type=='text/plain'){
+        observedData=read.table(file$datapath,skip=2,sep="|",dec=",")
+        observedData=observedData[,c(2,3,5,7,4)]
+        names(observedData)=c("Date","Time","Quality","W","Q")
+        observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
+    }else if(file$type=="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"){
+        observedData = readxl::read_xlsx(path = file$datapath, sheet = 1)
+        names(observedData)=c("Date","Time","Quality","W","Q")    
     }else{
-        if(gsub(".*\\.", "",file$datapath)=='txt'){
-            observedData=read.table(file,skip=2,sep="|",dec=",")   # $datapath ?
-            observedData=observedData[,c(2,3,5,7,4)]
-            #added
-            names(observedData)=c("Date","Time","Quality","W","Q")
-            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
-        }else if(gsub(".*\\.", "",file$datapath)=='xlsx'){
-            observedData=readxl::read_xlsx(path = file$datapath, sheet = 1)
-            #added
-            names(observedData)=c("Date","Time","Quality","W","Q")
-            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
-        }else{
-            return(NULL)
-        }
+        return(NULL)
     }
+    observedData$Date <- as.Date(observedData$Date)
     observedData$Time=as.character(observedData$Time)
     observedData$Q=gsub('\\s+', '',observedData$Q)
     observedData=observedData[observedData$W!=0,]
