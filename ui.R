@@ -21,7 +21,7 @@ rc_head_style <- '#rc_head {font-size:20px; color:black; ;display:block; }'
 rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
 auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
 m_item <- ".sidebar-menu li a { font-size: 15px; }"
-#g_style <- '* {font-family: "Arial"; font-size: 12px; };'
+
 
 fluidPage(
     withMathJax(),
@@ -77,9 +77,10 @@ fluidPage(
                                    
                                     
                                     tabPanel('Figures',
-                                             #textOutput('debug'),
+                                             textOutput('debug'),
                                              h4(textOutput("rc_head")), 
-                                             plotOutput('rc_fig'),
+                                             plotOutput('rc_fig',click ='rc_fig_click',dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
+                                                        brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
                                              plotOutput('rc_panel')),
                                     tabPanel('Tables',
                                              h4(textOutput("tab1_head")), 
@@ -117,22 +118,32 @@ fluidPage(
                                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                                    '.xls',
                                                    '.xlsx')),
-                                #checkboxGroupInput("checkbox", label = "Output",
-                                #                    choices=list("Rating curve"="rc","Rating curve transformed"="rc_tr",
-                                #                    "Residuals"="res","Power law exponent"="f_h","Standard deviation (data level)" = "sigma_eps") ,selected = "raun"),
                                 radioButtons(inputId="checkbox2", label="Rating Curve Type",choices=list("Generalized Power-law"='gen',"Power-law"='trad'),selected="gen"),
                                 radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
-                                textInput("c_parameter",label="Stage of zero discharge (c)",placeholder = 'Optional'),
+                                checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
+                                conditionalPanel(condition="input.advanced == true", 
+                                                 radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
+                                                 sliderInput("includeDates", label = "Date Range", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
+                                                             value=c(1950,as.numeric(format(Sys.Date(), "%Y"))),sep=""),
+                                                 checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
+                                                 conditionalPanel(condition="input.exclude == true",
+                                                                  dateRangeInput("excludeDates", label = "Date Range",start=Sys.Date()-1,end=Sys.Date()-1)),
+                                                 textInput("Wmax",label="Maximum Stage (m)"),
+                                                 textInput("c_parameter",label="Stage of zero discharge (c)"
+                                                           #,placeholder = 'Optional'
+                                                           ),
+                                                 actionButton('reset',label='Reset'),
+                                ),
+                                br(),
                                 actionButton("go", label="Create Rating Curve"),
                                 br(),br(),br(),
                                 #textInput("name","Name of River (optional)"),
-                                downloadButton('downloadImages',label='Download Report')
+                                downloadButton('downloadReport',label='Download Report')
                             )
                         )
                     )
                 ),
                 
-             
                 tabItem(tabName="about",
                         #includeMarkdown("About.md")
                         includeMarkdown("method.md")

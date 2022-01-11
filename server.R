@@ -29,26 +29,42 @@ shinyServer(function(input, output) {
             }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
-        inFile <- input$file
-        cleandata = readxl::read_xlsx(path = inFile$datapath, sheet = 1)
-        wq=cleandata[,c("W","Q")]
-        wq$W=0.01*wq$W
-        return(wq)
+        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,shiny=FALSE,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
+        if(length(vals$keeprows)==0 ){
+          vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
+        }
+        years=as.numeric(format(cleandata$observedData_before$Date, "%Y"))
+        includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
+        excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$ observedData_before$Date >= input$excludeDates[2]
+        daterange$keeprows=excludeindex & includeindex
+        return(cleandata)
+        
+        #inFile <- input$file
+        #cleandata = readxl::read_xlsx(path = inFile$datapath, sheet = 1)
+        # wq=cleandata[,c("W","Q")]
+        # wq$W=0.01*wq$W
+        #return(wq)
     })
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
       m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                   ifelse(input$checkbox3=='vary','','0'))
-        withProgress(message = 'Making plot', value = 0, {
+      ########## DEBUGGER ##########
+      # output$debug <- renderPrint({
+      #   as.data.frame(data()$wq)
+      # })
+      ##############################
+        #withProgress(message = 'Making plot', value = 0, {
           rc_fun <- get(m)
+          dat <- as.data.frame(data()$wq)
           if(isTruthy(input$show_c)){
-            rc.fit <- rc_fun(Q~W,c_param = as.numeric(input$c_parameter),data())
+            rc.fit <- rc_fun(Q~W, c_param = as.numeric(input$c_parameter), dat)
           }else{
-            rc.fit <- rc_fun(Q~W,data())
+            rc.fit <- rc_fun(Q~W,dat)
           }
           return(rc.fit)
-        })
+        #})
     })
     
     ## create headers ##
@@ -79,10 +95,6 @@ shinyServer(function(input, output) {
     })
     
     #### TAB 1 - Figures
-    # output$debug <- renderPrint({
-    #   print(isolate(m_class$m_class))
-    # })
-    
     output$rc_fig <- renderPlot({
       dummy=as.data.frame(reactiveValuesToList(dummy))
       force=as.data.frame(reactiveValuesToList(force))
@@ -130,7 +142,7 @@ shinyServer(function(input, output) {
 
     
     output$rc_table <- renderPlot({
-      tg <- list(tableGrob(format(round(predict(fit1,wide=T),digits=3),nsmall=3),
+      tg <- list(tableGrob(format(round(predict( rc_model() ,wide=T),digits=3),nsmall=3),
                            theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
                                                 colhead=list(fg_params=list(col="black",fontface=2L)),
                                                 rowhead=list(fg_params=list(col="black",fontface=2L)))))
@@ -148,6 +160,59 @@ shinyServer(function(input, output) {
     },height = 400,width = 500)
     
     
+    ### Download Report ###
+    output$downloadReport <- downloadHandler(
+      filename <- 'bdrc_report.pdf',
+      content <- function(file) {
+        filename <- 'bdrc_report.pdf'
+        report_pages <- bdrc::get_report_pages( rc_model() )
+        pdf(file=filename,paper='a4',width=9,height=11)
+        for(i in 1:length(report_pages)){
+          grid.arrange(report_pages[[i]],as.table=TRUE)
+        }
+        invisible(dev.off())
+        file.copy("bdrc_report.pdf", file)
+      }
+    )
+    
+    #######Interactivity#######
+    
+    # If so, zoom to the brush bounds; if not, reset the zoom.
+    observeEvent(input$rc_fig_dblclick, {
+      brush <- input$rc_fig_brush
+      if (!is.null(brush)) {
+        ranges1$x <- c(brush$xmin, brush$xmax)
+        ranges1$y <- c(brush$ymin, brush$ymax)
+        
+      } else {
+        ranges1$x <- NULL
+        ranges1$y <- NULL
+      }
+    })
+    
+    observeEvent(input$rc_fig_click,{
+      observedData=as.data.frame(data()$observedData_before)
+      res <- nearPoints(observedData, input$rc_fig_click,xvar = "Q", yvar = "W", allRows = TRUE,threshold=5)
+      if(any(res$selected_) & input$clickopts=='exclude'){
+        vals$keeprows=xor(vals$keeprows,res$selected_)
+      }else if(input$clickopts=='force'){
+        force$W=c(force$W,input$rc_fig_click$y)
+        force$Q=c(force$Q,input$rc_fig_click$x)
+      }else if(input$clickopts=='dummy'){
+        dummy$W=c(dummy$W,input$rc_fig_click$y)
+        dummy$Q=c(dummy$Q,input$rc_fig_click$x)
+      }
+    })
+    
+    
+    observeEvent(input$reset,{
+      n=nrow(data()$observedData_before)
+      vals$keeprows=rep(TRUE,n)
+      dummy$W=NULL
+      dummy$Q=NULL
+      force$W=NULL
+      force$Q=NULL
+    })
   
     # ## MODEL1 ##  Begin
     # model1 <- eventReactive(input$go,{
@@ -1103,61 +1168,8 @@ shinyServer(function(input, output) {
 #'      # # 
 #'      # 
 #'      # 
-#'      output$downloadImages <- downloadHandler(
-#'          filename = function() {
-#'              filename=input$name
-#'              if(nchar(filename)==0){
-#'                  filename=gsub("\\.[^.]*$","",input$file$name)
-#'              }
-#'              paste(filename,'html', sep=".")
-#'          },
-#'          content <- function(file) {
-#'              owd <- setwd(tempdir())
-#'              on.exit(setwd(owd))
-#'              setwd(owd)
-#' 
-#'                  src <- normalizePath('images.Rmd')
-#'                  file.copy(src, 'images.Rmd')
-#'                  out <- render('images.Rmd',html_document())
-#'                  file.rename(out, file)
-#'          }
-#' 
-#'      )
-#' 
-#'      # 
-#'      # output$downloadReport <- downloadHandler(
-#'      #         filename = function() {
-#'      #             filename=input$name
-#'      #             if(nchar(filename)==0){
-#'      #             filename=gsub("\\.[^.]*$","",input$file$name)
-#'      #             }
-#'      #             paste(filename,'pdf', sep=".")
-#'      #         },
-#'      #         content <- function(file) {
-#'      #             owd <- setwd(tempdir())
-#'      #             on.exit(setwd(owd))
-#'      #             setwd(owd)
-#'      #             if("mdl1" %in% input$checkbox2 & ("mdl2" %in% input$checkbox2)==FALSE ){
-#'      #                 src <- normalizePath('myreport1.Rmd')
-#'      #                 file.copy(src, 'myreport1.Rmd')
-#'      #                 out <- render('myreport1.Rmd',pdf_document())
-#'      #                 }
-#'      # 
-#'      #             else if("mdl2" %in% input$checkbox2 & ("mdl1" %in% input$checkbox2)==FALSE ){
-#'      #                 src <- normalizePath('myreport2.Rmd')
-#'      #                 file.copy(src, 'myreport2.Rmd')
-#'      #                 out <- render('myreport2.Rmd',pdf_document())
-#'      #                 }
-#'      #             else if("mdl1" %in% input$checkbox2 & "mdl2" %in% input$checkbox2 ){
-#'      #                 src <- normalizePath('myreport.Rmd')
-#'      #                 file.copy(src, 'myreport.Rmd')
-#'      #                 out <- render('myreport.Rmd',pdf_document())
-#'      #             }
-#'      #             file.rename(out, file)
-#'      # 
-#'      #         }
-#'      # )
-#'     
+
+
 #'     #'Data cleaning
 #'     #'
 #'     #'Takes in stage-discharge data and cleans it, and subsets it according to user inputs.

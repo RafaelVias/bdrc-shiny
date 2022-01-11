@@ -23,19 +23,19 @@ This Shiny application can be used to generate a discharge rating curve from pai
 
 To upload data, select **Browse** in the Controls section
 
-![](browse_pic.png){#id .class width=40% height=40%}
+![](browse_pic.png){#id .class width=50% height=50%}
 
 The uploaded file must be an excel file with at least two columns named **W** and **Q**, containing the stage and discharge observations, respectively. The stage observations must be given in **centimeters** ($cm$), and the the discharge in **cubic meters per second** ($m^3/s$).
-A test dataset can be downloaded by pushing **Download xlxs test file** above the Browse button.
-The first row contains the column names, including **W** and **Q**, and the observations are in the corresponding columns. When uploaded, the application then automatically selects only these two columns from the file.
+A test dataset can be downloaded by pushing **Download xlsx test file** above the Browse button.
+The first row contains the column names, including **W** and **Q**, and the observations are in the corresponding columns. When uploaded, the application automatically selects only these two columns from the file.
 
-![](excel_sheet.png){#id .class width=60% height=60%}
+![](excel_sheet.png){#id .class width=70% height=70%}
 
 <br />
 
 ## 2. Specify a Rating Curve Model
 
-Once the data is uploaded, the Rating Curve Model can be specified. There are two model characteristics that can be altered. First, the **Rating Curve Type** can be set to either **Generalized Power-Law** or **Power-law**. This setting specifies the type of rating curve the mean of the model is to follow. In simple terms; the Generalized Power-law rating curve is more flexible and is able to give a convincing fit to a greater number of datasets. For this reason it is selected as the default type. For more details on these rating curve differences go to **Background** in the left sidebar menu. The second model specification is to choose between a **Constant** or **Stage varying** residual variance. If set to *stage varying* then the model tries to capture any changes in the residual variance that happens over the stage values. This can improve the predictive power of the model, and therefore is selected as the default setting.
+Once the data is uploaded, the Rating Curve Model can be specified. There are two model characteristics that can be adjusted to set the model complexity. First, the **Rating Curve Type** can be set to either **Generalized Power-Law** or **Power-law**. This setting specifies the type of rating curve that the mean of the model will follow. In simple terms; the Generalized Power-law rating curve is more flexible and is able to give a convincing fit to a greater number of datasets. For this reason it is selected as the default type. For more details on these rating curve differences go to **Background** in the left sidebar menu. The second model specification is to choose between a **Constant** or **Stage varying** residual variance. If set to *stage varying* then the model tries to capture any changes in the residual variance that happens over the stage values. This can improve the predictive power of the model, and is therefore selected as the default setting.
 
 ![](rc_spec.png){#id .class width=32% height=32%}
 

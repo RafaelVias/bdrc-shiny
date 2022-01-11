@@ -51,3 +51,84 @@ justify <- function(x, hjust="center", vjust="center"){
     x$vp <- viewport(x=xj, y=yj)
     return(x)
 }
+
+clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.Date(), "%Y"))),dummy=NULL,keeprows=NULL,force=NULL,shiny=FALSE,Wmin=NA,Wmax=NA, exclude=TRUE,excludedates=c(Sys.Date()-1,Sys.Date()-1)){
+    
+    if (is.null(file)){
+        return(NULL)
+    }
+    name=file
+    if(shiny==TRUE){
+        list2env(file,envir=environment())
+        
+        if(type=='text/plain'){
+            observedData=read.table(datapath,skip=2,sep="|",dec=",")
+            observedData=observedData[,c(2,3,5,7,4)]
+            names(observedData)=c("Date","Time","Quality","W","Q")
+            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
+            #else if(type=="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        }else if(type=="list"){
+            observedData = readxl::read_xlsx(path = file$datapath, sheet = 1)
+            names(observedData)=c("Date","Time","Quality","W","Q")
+            
+        }else{
+            return(NULL)
+        }
+    }else{
+        if(gsub(".*\\.", "",file$datapath)=='txt'){
+            observedData=read.table(file,skip=2,sep="|",dec=",")   # $datapath ?
+            observedData=observedData[,c(2,3,5,7,4)]
+            #added
+            names(observedData)=c("Date","Time","Quality","W","Q")
+            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
+        }else if(gsub(".*\\.", "",file$datapath)=='xlsx'){
+            observedData=readxl::read_xlsx(path = file$datapath, sheet = 1)
+            #added
+            names(observedData)=c("Date","Time","Quality","W","Q")
+            observedData$Date=as.Date(gsub("\\.","-",observedData$Date),"%d-%m-%Y")
+        }else{
+            return(NULL)
+        }
+    }
+    observedData$Time=as.character(observedData$Time)
+    observedData$Q=gsub('\\s+', '',observedData$Q)
+    observedData=observedData[observedData$W!=0,]
+    observedData$Q=as.numeric(as.character(gsub(",",".",observedData$Q)))
+    observedData$W=0.01*observedData$W
+    observedData=observedData[with(observedData,order(W)),]
+    observedData_before=observedData
+    
+    if(advanced==TRUE){
+        if(length(keeprows)!=0){
+            observedData=observedData[keeprows,]
+        }
+        
+        if(sum(unlist(lapply(dummy,length)))!=0){
+            dummydata=as.data.frame(dummy)
+            dummydata=round(dummydata,3)
+            dummydata$Date=Sys.Date()
+            dummydata$Time=format(Sys.time(),"%H:%M:%S")
+            dummydata$Quality="dummy"
+            dummydata=dummydata[,c("Date","Time","Quality","W","Q")]
+            observedData=rbind(observedData,dummydata)
+            
+        }
+        if(sum(unlist(lapply(force,length)))!=0){
+            forcedata=as.data.frame(force)
+            forcedata=round(forcedata,3)
+            forcedata$Date=Sys.Date()
+            forcedata$Time=format(Sys.time(),"%H:%M:%S")
+            forcedata$Quality="forcepoint"
+            forcedata=forcedata[,c("Date","Time","Quality","W","Q")]
+            observedData=rbind(observedData,forcedata)
+        }
+    }
+    #order again with new data from dummy or force
+    observedData=observedData[with(observedData,order(W)),]
+    if(is.na(Wmin)) Wmin=min(observedData$W)
+    if(is.na(Wmax)) Wmax=max(observedData$W)
+    observedData=subset(observedData,W >= Wmin & W <=Wmax )
+    wq=as.matrix(observedData[,c("W","Q")])
+    
+    return(list("wq"=wq,"observedData"=observedData,"observedData_before"=observedData_before))
+}
