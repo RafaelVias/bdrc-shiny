@@ -135,7 +135,7 @@ ui <- shinyUI(fluidPage(
                                                                checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
                                                                conditionalPanel(condition="input.advanced == true", 
                                                                                 radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
-                                                                                sliderInput("includeDates", label = "Date Range", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
+                                                                                sliderInput("includeDates", label = "Date Range Included", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
                                                                                             value=c(1950,as.numeric(format(Sys.Date(), "%Y"))),sep=""),
                                                                                 checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
                                                                                 conditionalPanel(condition="input.exclude == true",
@@ -174,10 +174,10 @@ ui <- shinyUI(fluidPage(
 
 vals<-reactiveValues(keeprows=NULL)
 daterange=reactiveValues(keeprows=NULL)
-ranges1 <- reactiveValues(x = NULL, y = NULL)
-ranges2 <- reactiveValues(x = NULL, y = NULL)
+ranges <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
+exclude_point <- reactiveValues(Q=NULL,W=NULL)
 
 server <- function(input, output) {
     
@@ -188,6 +188,8 @@ server <- function(input, output) {
         }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
+        exclude_point=reactiveValuesToList(exclude_point)
+        
         cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
         if(length(vals$keeprows)==0 ){
             vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
@@ -232,16 +234,6 @@ server <- function(input, output) {
         return(head_list)
     })
     
-    ########## DEBUGGER ##########
-    # output$debug <- renderPrint({
-    #     years=as.numeric(format(data()$observedData_before$Date, "%Y"))
-    #     includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
-    #     excludeindex=data()$observedData_before$Date<=input$excludeDates[1] | data()$observedData_before$Date >= input$excludeDates[2]
-    #     #print(years)
-    #     print(includeindex)
-    #     print(daterange$keeprows)
-    # })
-    ##############################
     
     output$tab1_head <- renderText({
         headers()$tab1_head
@@ -263,13 +255,18 @@ server <- function(input, output) {
     output$rc_fig <- renderPlot({
         dummy=as.data.frame(reactiveValuesToList(dummy))
         force=as.data.frame(reactiveValuesToList(force))
+        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
         
-        rc_fig <- autoplot( rc_model()) + coord_cartesian( xlim = ranges2$x, ylim = ranges2$y )
+        rc_fig <- autoplot( rc_model()) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
+        
         if(any(dim(dummy))){
-            rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="red", col="red" )
+            rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
         }
         if(any(dim(force))){
             rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+        }
+        if(any(dim(exclude_point))){
+            rc_fig <- rc_fig + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red")
         }
         rc_fig
     },height=400,width=550)
@@ -319,10 +316,10 @@ server <- function(input, output) {
     #### TAB 3 - Convergence diagnostics
     output$conv_diag1 <- renderPlot({
         autoplot(rc_model(), type='r_hat') 
-    },height = 400,width = 500)
+    },height = 400,width = 550)
     output$conv_diag2 <- renderPlot({
         autoplot(rc_model(), type='autocorrelation')
-    },height = 400,width = 500)
+    },height = 400,width = 550)
     
     
     ### Download Report ###
@@ -346,20 +343,27 @@ server <- function(input, output) {
     observeEvent(input$rc_fig_dblclick, {
         brush <- input$rc_fig_brush
         if (!is.null(brush)) {
-            ranges1$x <- c(brush$xmin, brush$xmax)
-            ranges1$y <- c(brush$ymin, brush$ymax)
-            
+            ranges$x <- c(brush$xmin, brush$xmax)
+            ranges$y <- c(brush$ymin, brush$ymax)
         } else {
-            ranges1$x <- NULL
-            ranges1$y <- NULL
+            ranges$x <- NULL
+            ranges$y <- NULL
         }
     })
+    
+    ########## DEBUGGER ##########
+    output$debug <- renderPrint({
+        print(nrow(data()$wq))
+    })
+    ##############################
     
     observeEvent(input$rc_fig_click,{
         observedData=as.data.frame(data()$observedData_before)
         res <- nearPoints(observedData, input$rc_fig_click,xvar = "Q", yvar = "W", allRows = TRUE,threshold=5)
         if(any(res$selected_) & input$clickopts=='exclude'){
             vals$keeprows=xor(vals$keeprows,res$selected_)
+            exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_,]))
+            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_,]))   # FIX !
         }else if(input$clickopts=='force'){
             force$W=c(force$W,input$rc_fig_click$y)
             force$Q=c(force$Q,input$rc_fig_click$x)
@@ -377,6 +381,8 @@ server <- function(input, output) {
         dummy$Q=NULL
         force$W=NULL
         force$Q=NULL
+        exclude_point$W=NULL
+        exclude_point$Q=NULL
     })
 }
 shinyApp(ui, server)
