@@ -188,13 +188,13 @@ server <- function(input, output) {
         }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
-        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,shiny=FALSE,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
+        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
         if(length(vals$keeprows)==0 ){
             vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
         }
         years=as.numeric(format(cleandata$observedData_before$Date, "%Y"))
         includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
-        excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$ observedData_before$Date >= input$excludeDates[2]
+        excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
         daterange$keeprows=excludeindex & includeindex
         return(cleandata)
         
@@ -209,14 +209,9 @@ server <- function(input, output) {
     rc_model <- eventReactive(input$go,{
         m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                     ifelse(input$checkbox3=='vary','','0'))
-        ########## DEBUGGER ##########
-        # output$debug <- renderPrint({
-        #   as.data.frame(data()$wq)
-        # })
-        ##############################
         #withProgress(message = 'Making plot', value = 0, {
         rc_fun <- get(m)
-        dat <- as.data.frame(data()$wq)
+        dat <- as.data.frame(data()$wq[daterange$keeprows,])
         if(isTruthy(input$show_c)){
             rc.fit <- rc_fun(Q~W, c_param = as.numeric(input$c_parameter), dat)
         }else{
@@ -236,6 +231,17 @@ server <- function(input, output) {
         head_list$auto_head <- paste('Autocorrelation Plot')
         return(head_list)
     })
+    
+    ########## DEBUGGER ##########
+    # output$debug <- renderPrint({
+    #     years=as.numeric(format(data()$observedData_before$Date, "%Y"))
+    #     includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
+    #     excludeindex=data()$observedData_before$Date<=input$excludeDates[1] | data()$observedData_before$Date >= input$excludeDates[2]
+    #     #print(years)
+    #     print(includeindex)
+    #     print(daterange$keeprows)
+    # })
+    ##############################
     
     output$tab1_head <- renderText({
         headers()$tab1_head
