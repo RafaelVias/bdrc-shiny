@@ -2,9 +2,6 @@ suppressPackageStartupMessages(library(shinydashboard))
 suppressPackageStartupMessages(library(googleVis))
 suppressPackageStartupMessages(library(shinyWidgets))
 
-
-
-
 js <- '.nav-tabs-custom .nav-tabs li.active {
     border-top-color: #1a3263;
 }"'
@@ -21,6 +18,11 @@ rc_head_style <- '#rc_head {font-size:20px; color:black; ;display:block; }'
 rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
 auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
 m_item <- ".sidebar-menu li a { font-size: 15px; }"
+
+rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
+sapply(rmdfiles, knit, quiet = T)
+
+mdfiles <- gsub('.rmd','.md',tolower(rmdfiles)) 
 
 
 fluidPage(
