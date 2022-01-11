@@ -157,7 +157,6 @@ ui <- shinyUI(fluidPage(
                                         ),
                                         
                                         tabItem(tabName="about",
-                                                #includeMarkdown("About.md")
                                                 includeMarkdown("method.md")
                                         ),
                                         tabItem(tabName="instructions",
