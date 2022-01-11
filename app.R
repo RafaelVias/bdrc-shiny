@@ -149,7 +149,6 @@ ui <- shinyUI(fluidPage(
                                                                br(),
                                                                actionButton("go", label="Create Rating Curve"),
                                                                br(),br(),br(),
-                                                               #textInput("name","Name of River (optional)"),
                                                                downloadButton('downloadReport',label='Download Report')
                                                            )
                                                     )

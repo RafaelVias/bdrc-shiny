@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Software <img src="man/figures/logo.png" align="right" alt="" width="140" />
+## Software <img src="www/logo.png" align="right" alt="" width="140" />
 
 This Shiny application uses the R-package `bdrc` (*Bayesian Discharge Rating Curves*). The package, which is freely available on CRAN, allows the user to fit a discharge rating curve based on the power-law, and the novel generalized power-law, from data on paired stage and discharge measurements in a given river using a Bayesian hierarchical model as described in Hrafnkelsson et al. (2021). Four models are implemented in the package:
 
