@@ -188,9 +188,8 @@ server <- function(input, output) {
         }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
-        exclude_point=reactiveValuesToList(exclude_point)
-        
         cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
+        
         if(length(vals$keeprows)==0 ){
             vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
         }
@@ -213,11 +212,11 @@ server <- function(input, output) {
                     ifelse(input$checkbox3=='vary','','0'))
         #withProgress(message = 'Making plot', value = 0, {
         rc_fun <- get(m)
-        dat <- as.data.frame(data()$wq[daterange$keeprows,])
+        dat <- as.data.frame(data()$wq)
         if(isTruthy(input$show_c)){
-            rc.fit <- rc_fun(Q~W, c_param = as.numeric(input$c_parameter), dat)
+            rc.fit <- rc_fun(Q~W, c_param = as.numeric(input$c_parameter), dat,forcepoint=data()$observedData$Quality=='forcepoint')
         }else{
-            rc.fit <- rc_fun(Q~W,dat)
+            rc.fit <- rc_fun(Q~W,dat,forcepoint=data()$observedData$Quality=='forcepoint')
         }
         return(rc.fit)
         #})
@@ -352,9 +351,9 @@ server <- function(input, output) {
     })
     
     ########## DEBUGGER ##########
-    output$debug <- renderPrint({
-        print(nrow(data()$wq))
-    })
+    # output$debug <- renderPrint({
+    #     print(length(daterange$keeprows))
+    # })
     ##############################
     
     observeEvent(input$rc_fig_click,{
@@ -362,8 +361,8 @@ server <- function(input, output) {
         res <- nearPoints(observedData, input$rc_fig_click,xvar = "Q", yvar = "W", allRows = TRUE,threshold=5)
         if(any(res$selected_) & input$clickopts=='exclude'){
             vals$keeprows=xor(vals$keeprows,res$selected_)
-            exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_,]))
-            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_,]))   # FIX !
+            exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_]))
+            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_]))   # FIX !
         }else if(input$clickopts=='force'){
             force$W=c(force$W,input$rc_fig_click$y)
             force$Q=c(force$Q,input$rc_fig_click$x)
@@ -381,8 +380,6 @@ server <- function(input, output) {
         dummy$Q=NULL
         force$W=NULL
         force$Q=NULL
-        exclude_point$W=NULL
-        exclude_point$Q=NULL
     })
 }
 shinyApp(ui, server)

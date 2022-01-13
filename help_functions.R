@@ -83,6 +83,11 @@ clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.D
         if(length(keeprows)!=0){
             observedData=observedData[keeprows,]
         }
+        years=as.numeric(format(observedData$Date, "%Y"))
+        observedData=observedData[which(years<=includedates[2] & years >= includedates[1]),]
+        if(exclude==TRUE){
+            observedData=observedData[which(observedData$Date<=excludedates[1] | observedData$Date >= excludedates[2]),]
+        }
         
         if(sum(unlist(lapply(dummy,length)))!=0){
             dummydata=as.data.frame(dummy)
