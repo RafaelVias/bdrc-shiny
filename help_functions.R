@@ -53,7 +53,7 @@ justify <- function(x, hjust="center", vjust="center"){
 }
 
 clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.Date(), "%Y"))),
-                  dummy=NULL,keeprows=NULL,force=NULL,Wmin=NA,Wmax=NA, exclude=TRUE,
+                  dummy=NULL,keeprows=NULL,force=NULL,h_min=NA,h_max=NA, exclude=TRUE,
                   excludedates=c(Sys.Date()-1,Sys.Date()-1)){
     
     if (is.null(file)){
@@ -111,9 +111,9 @@ clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.D
     }
     #order again with new data from dummy or force
     observedData=observedData[with(observedData,order(W)),]
-    if(is.na(Wmin)) Wmin=min(observedData$W)
-    if(is.na(Wmax)) Wmax=max(observedData$W)
-    observedData=subset(observedData,W >= Wmin & W <=Wmax )
+    if(is.na(h_min)) h_min=min(observedData$W)
+    if(is.na(h_max)) h_max=max(observedData$W)
+    observedData=subset(observedData,W >= h_min & W <=h_max )
     wq=as.matrix(observedData[,c("W","Q")])
     
     return(list("wq"=wq,"observedData"=observedData,"observedData_before"=observedData_before))

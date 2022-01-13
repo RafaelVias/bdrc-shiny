@@ -140,7 +140,7 @@ ui <- shinyUI(fluidPage(
                                                                                 checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
                                                                                 conditionalPanel(condition="input.exclude == true",
                                                                                                  dateRangeInput("excludeDates", label = "Date Range",start=Sys.Date()-1,end=Sys.Date()-1)),
-                                                                                textInput("Wmax",label="Maximum Stage (m)"),
+                                                                                textInput("h_max",label="Maximum Stage (m)"),
                                                                                 textInput("c_parameter",label="Stage of zero discharge (c)"
                                                                                           #,placeholder = 'Optional'
                                                                                 ),
@@ -188,7 +188,10 @@ server <- function(input, output) {
         }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
-        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,advanced=input$advanced,exclude=input$exclude,excludedates=input$excludeDates, includedates=input$includeDates)
+        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
+                        advanced=input$advanced,exclude=input$exclude,
+                        excludedates=input$excludeDates, includedates=input$includeDates,
+                        h_max=as.numeric(input$h_max))
         
         if(length(vals$keeprows)==0 ){
             vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
@@ -198,12 +201,6 @@ server <- function(input, output) {
         excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
         daterange$keeprows=excludeindex & includeindex
         return(cleandata)
-        
-        #inFile <- input$file
-        #cleandata = readxl::read_xlsx(path = inFile$datapath, sheet = 1)
-        # wq=cleandata[,c("W","Q")]
-        # wq$W=0.01*wq$W
-        #return(wq)
     })
     
     ## run Models ##
@@ -213,11 +210,11 @@ server <- function(input, output) {
         #withProgress(message = 'Making plot', value = 0, {
         rc_fun <- get(m)
         dat <- as.data.frame(data()$wq)
-        if(isTruthy(input$show_c)){
-            rc.fit <- rc_fun(Q~W, c_param = as.numeric(input$c_parameter), dat,forcepoint=data()$observedData$Quality=='forcepoint')
-        }else{
-            rc.fit <- rc_fun(Q~W,dat,forcepoint=data()$observedData$Quality=='forcepoint')
+        c_parameter <- as.numeric(input$c_parameter)
+        if(is.na(c_parameter)){
+            c_parameter <- NULL
         }
+        rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat,forcepoint=data()$observedData$Quality=='forcepoint')
         return(rc.fit)
         #})
     })
@@ -352,7 +349,8 @@ server <- function(input, output) {
     
     ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(length(daterange$keeprows))
+    #     print(input$show_c)
+    #     print(input$c_parameter)
     # })
     ##############################
     
