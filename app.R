@@ -90,18 +90,18 @@ ui <- shinyUI(fluidPage(
                                                                id = "tabset1",width=NULL,
                                                                
                                                                
-                                                               tabPanel('Figures',
+                                                               tabPanel(span('Figures',style='font-size: 15px;'),
                                                                         textOutput('debug'),
                                                                         h4(textOutput("rc_head")), 
                                                                         plotOutput('rc_fig',click ='rc_fig_click',dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
                                                                                    brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
                                                                         plotOutput('rc_panel')),
-                                                               tabPanel('Tables',
+                                                               tabPanel(span('Tables',style='font-size: 15px;'),
                                                                         h4(textOutput("tab1_head")), 
                                                                         uiOutput('param_sum'),
                                                                         h4(textOutput("tab2_head")),
                                                                         plotOutput('rc_table')),
-                                                               tabPanel('Convergence diagnostics',
+                                                               tabPanel(span('Convergence diagnostics',style='font-size: 15px;'),
                                                                         h4(textOutput("rhat_head")),
                                                                         plotOutput('conv_diag1'),
                                                                         h4(textOutput("auto_head")),
@@ -218,17 +218,26 @@ server <- function(input, output, session) {
                         ifelse(input$checkbox3=='vary','','0'))
         }
         dat <- as.data.frame(data()$wq)
+        if( input$h_max!='' ){
+            if( as.numeric(input$h_max) > max(dat$W) ){
+                h_max <- as.numeric(input$h_max)
+            }else{
+                h_max <- NULL
+            }
+        }else{
+            h_max <- NULL
+        }
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
             c_parameter <- NULL
         }
         rc_fun <- get(m)
         if(m=='tournament'){
-            rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat)
+            rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat)
             rc.fit <- rc.fit$winner
             best_model$class <- class(rc.fit)
         }else{
-            rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat,forcepoint=data()$observedData$Quality=='forcepoint')
+            rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat, forcepoint=data()$observedData$Quality=='forcepoint')
         }
         return(rc.fit)
     })
