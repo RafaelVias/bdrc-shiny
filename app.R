@@ -10,6 +10,7 @@ library(gridExtra)
 library(xtable)
 library(shiny)
 library(knitr)
+library(shinyalert)
 
 source('help_functions.R')
 options(shiny.usecairo=T)
@@ -36,6 +37,7 @@ rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
 sapply(rmdfiles, knit, quiet = T)
 
 ui <- shinyUI(fluidPage(
+        shinyjs::useShinyjs(),
         withMathJax(),
         dashboardPage(skin = 'black',
                       
@@ -123,29 +125,32 @@ ui <- shinyUI(fluidPage(
                                                            box(status="primary", width = NULL,
                                                                title = "Controls",
                                                                tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file'),
-                                                               br(),
-                                                               br(),
-                                                               fileInput('file', 'Upload Excel File',
-                                                                         accept=c('application/vnd.ms-excel',
-                                                                                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                                                                  '.xls',
-                                                                                  '.xlsx')),
-                                                               radioButtons(inputId="checkbox2", label="Rating Curve Type",choices=list("Generalized Power-law"='gen',"Power-law"='trad'),selected="gen"),
-                                                               radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
-                                                               checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
-                                                               conditionalPanel(condition="input.advanced == true", 
-                                                                                radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
-                                                                                sliderInput("includeDates", label = "Date Range Included", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
-                                                                                            value=c(1950,as.numeric(format(Sys.Date(), "%Y"))),sep=""),
-                                                                                checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
-                                                                                conditionalPanel(condition="input.exclude == true",
-                                                                                                 dateRangeInput("excludeDates", label = "Date Range",start=Sys.Date()-1,end=Sys.Date()-1)),
-                                                                                textInput("h_max",label="Maximum Stage (m)"),
-                                                                                textInput("c_parameter",label="Stage of zero discharge (c)"
-                                                                                          #,placeholder = 'Optional'
-                                                                                ),
-                                                                                actionButton('reset',label='Reset'),
-                                                               ),
+                                                                   br(),
+                                                                   br(),
+                                                                   fileInput('file', 'Upload Excel File',
+                                                                             accept=c('application/vnd.ms-excel',
+                                                                                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                                                                      '.xls',
+                                                                                      '.xlsx')),
+                                                               box(radioButtons(inputId="checkbox2", label="Rating Curve Type",choices=list("Generalized Power-law"='gen',"Power-law"='trad'),selected="gen"),
+                                                                   radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
+                                                                   checkboxInput("tournament", label=span('Calculate Best Rating Curve',style='font-weight: bold;'), value=FALSE),
+                                                                   width = 12),
+                                                               box(checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
+                                                                   conditionalPanel(condition="input.advanced == true", 
+                                                                                    radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
+                                                                                    sliderInput("includeDates", label = "Date Range Included", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
+                                                                                                value=c(1950,as.numeric(format(Sys.Date(), "%Y"))),sep=""),
+                                                                                    checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
+                                                                                    conditionalPanel(condition="input.exclude == true",
+                                                                                                     dateRangeInput("excludeDates", label = "Date Range",start=Sys.Date()-1,end=Sys.Date()-1)),
+                                                                                    textInput("h_max",label="Maximum Stage (m)"),
+                                                                                    textInput("c_parameter",label="Stage of zero discharge (c)"
+                                                                                              #,placeholder = 'Optional'
+                                                                                    ),
+                                                                                    actionButton('reset',label='Reset'),
+                                                                                    ),
+                                                                   width=12),
                                                                br(),
                                                                actionButton("go", label="Create Rating Curve"),
                                                                br(),br(),br(),
@@ -178,8 +183,9 @@ ranges <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
 exclude_point <- reactiveValues(Q=NULL,W=NULL)
+best_model <- reactiveValues(class=NULL)
 
-server <- function(input, output) {
+server <- function(input, output, session) {
     
     ## data import ##
     data <- eventReactive(input$go,{
@@ -205,16 +211,26 @@ server <- function(input, output) {
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
-        m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
-                    ifelse(input$checkbox3=='vary','','0'))
+        if(input$tournament){
+            m <- 'tournament'
+        }else{
+            m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
+                        ifelse(input$checkbox3=='vary','','0'))
+        }
         #withProgress(message = 'Making plot', value = 0, {
-        rc_fun <- get(m)
         dat <- as.data.frame(data()$wq)
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
             c_parameter <- NULL
         }
-        rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat,forcepoint=data()$observedData$Quality=='forcepoint')
+        rc_fun <- get(m)
+        if(m=='tournament'){
+            rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat)
+            rc.fit <- rc.fit$winner
+            best_model$class <- class(rc.fit)
+        }else{
+            rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat,forcepoint=data()$observedData$Quality=='forcepoint')
+        }
         return(rc.fit)
         #})
     })
@@ -333,6 +349,59 @@ server <- function(input, output) {
         }
     )
     
+    ### Tournament ###
+    
+    observeEvent(input$tournament, {
+        if(input$tournament){
+            shinyjs::disable("checkbox2")
+            shinyjs::disable("checkbox3")
+            showModal(modalDialog(
+                title = span("Heads up!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
+                span("Great choice!",style='font-size: 17px'),
+                br(),
+                span("We will find the appropriate rating curve model for your data.",style='font-size: 17px'),
+                br(),
+                span("This is great feature of our software, but might take a couple of minutes complete.",style='font-size: 17px'),
+                size='m',
+                easyClose = TRUE,
+                fade = TRUE,
+                footer = tagList(
+                    modalButton(span("Got it!",style='font-size: 17px'))
+                )
+            ))
+            # shinyalert(
+            #     title = "Heads up!",
+            #     text = "Great choice!\n We will find the appropriate rating curve model for your data.\n This is great feature of our software,\n but might take a couple of minutes complete.",
+            #     size = "s",
+            #     closeOnEsc = TRUE,
+            #     closeOnClickOutside = FALSE,
+            #     html = FALSE,
+            #     type = "success",
+            #     showConfirmButton = TRUE,
+            #     showCancelButton = FALSE,
+            #     confirmButtonText = "Got it!",
+            #     confirmButtonCol = "#AEDEF4",
+            #     timer = 0,
+            #     imageUrl = "",
+            #     animation = TRUE
+            # )
+        }else{
+            shinyjs::enable("checkbox2")
+            shinyjs::enable("checkbox3")
+        }
+    })
+    
+    observeEvent(input$go, {
+        if(input$tournament){
+            rc_type <- ifelse(grepl('g',best_model$class),'gen','trad')
+            var_type <- ifelse(grepl('0',best_model$class),'const','vary')
+            updateRadioButtons(session, inputId = "checkbox2", selected = rc_type)
+            updateRadioButtons(session, inputId = "checkbox3", selected = var_type)
+            updateCheckboxInput(session, 'tournament', value = FALSE)
+        }
+    })
+    
+    
     #######Interactivity#######
     
     # If so, zoom to the brush bounds; if not, reset the zoom.
@@ -347,12 +416,11 @@ server <- function(input, output) {
         }
     })
     
-    ########## DEBUGGER ##########
+    # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(input$show_c)
-    #     print(input$c_parameter)
+    #     print(best_model$class)
     # })
-    ##############################
+    # ##############################
     
     observeEvent(input$rc_fig_click,{
         observedData=as.data.frame(data()$observedData_before)
