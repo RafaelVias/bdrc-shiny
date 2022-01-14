@@ -348,21 +348,25 @@ server <- function(input, output, session) {
         filename <- 'bdrc_report.pdf',
         content <- function(file) {
             filename <- 'bdrc_report.pdf'
-            mod <- rc_model()
-            report_pages <- bdrc::get_report_pages(mod)
-            panel_plot <- grid.arrange(create_rc_fig(),create_rc_panel()$resid,
-                                       create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
-            param <- get_param_names(class(mod),mod$run_info$c_param)
-            table <- rbind(mod$param_summary[,c('lower','median','upper')],c(mod$Deviance_summary))
+            m <- rc_model()
+            report_pages <- bdrc::get_report_pages(m)
+            panel_plot <- arrangeGrob(create_rc_fig(),create_rc_panel()$resid,
+                                      create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
+            param <- get_param_names(class(m),m$run_info$c_param)
+            table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
             names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
-            row.names(table) <- c(sapply(1:length(param),get_param_expression),"Deviance")
+            row.names(table) <- c(sapply(1:length(param),function(x) get_param_expression(x,latex=FALSE)),"Deviance")
             table <- format(round(table,digits=3),nsmall=3)
             table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
-            page1_revised <- arrangeGrob(panel_plot,table_grob,nrow=2,as.table=TRUE,heights=c(5,3),
-                                         top=textGrob(class(mod),gp=gpar(fontsize=22,facetype='bold')))
+            page1_revised <- arrangeGrob(panel_plot,
+                                         table_grob,
+                                         nrow=2,
+                                         as.table=TRUE,
+                                         heights=c(5,3),
+                                         top=textGrob(class(m),gp=gpar(fontsize=22,facetype='bold')))
             pdf(file=filename,paper='a4',width=9,height=11)
             grid.arrange(page1_revised,as.table=TRUE)
-            grid.arrange(report_pages[[2]],as.table=TRUE)
+            for(i in 2:length(report_pages) ) grid.arrange(report_pages[[i]],as.table=TRUE)
             invisible(dev.off())
             file.copy("bdrc_report.pdf", file)
         }
