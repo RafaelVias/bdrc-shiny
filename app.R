@@ -206,6 +206,9 @@ server <- function(input, output, session) {
         includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
         excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
         daterange$keeprows=excludeindex & includeindex
+        if(nrow(cleandata$wq) < 3){
+            stop('There are less than 3 data points. Cannot fit rating curve')
+        }
         return(cleandata)
     })
     
@@ -218,13 +221,8 @@ server <- function(input, output, session) {
                         ifelse(input$checkbox3=='vary','','0'))
         }
         dat <- as.data.frame(data()$wq)
-        if( input$h_max!='' ){
-            if( as.numeric(input$h_max) > max(dat$W) ){
-                h_max <- as.numeric(input$h_max)
-            }else{
-                h_max <- NULL
-            }
-        }else{
+        h_max <- as.numeric(input$h_max)
+        if(is.na(h_max)){
             h_max <- NULL
         }
         c_parameter <- as.numeric(input$c_parameter)
