@@ -190,7 +190,7 @@ server <- function(input, output, session) {
     ## data import ##
     data <- eventReactive(input$go,{
         if(is.null(input$file)){
-            return(NULL)
+            stop('Please upload data in order to fit a rating curve')
         }
         dummy=reactiveValuesToList(dummy)
         force=reactiveValuesToList(force)
@@ -217,7 +217,6 @@ server <- function(input, output, session) {
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
         }
-        #withProgress(message = 'Making plot', value = 0, {
         dat <- as.data.frame(data()$wq)
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
@@ -232,7 +231,6 @@ server <- function(input, output, session) {
             rc.fit <- rc_fun(Q~W, c_param = c_parameter,data=dat,forcepoint=data()$observedData$Quality=='forcepoint')
         }
         return(rc.fit)
-        #})
     })
     
     ## create headers ##
@@ -357,11 +355,9 @@ server <- function(input, output, session) {
             shinyjs::disable("checkbox3")
             showModal(modalDialog(
                 title = span("Heads up!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                span("Great choice!",style='font-size: 17px'),
-                br(),
-                span("We will find the appropriate rating curve model for your data.",style='font-size: 17px'),
-                br(),
-                span("This is great feature of our software, but might take a couple of minutes complete.",style='font-size: 17px'),
+                span("We will find the appropriate rating curve model for your data using model comparison of all available model types. 
+                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal rating curve 
+                     type and residual variance will be indicated on the right after running.",style='font-size: 17px'),
                 size='m',
                 easyClose = TRUE,
                 fade = TRUE,
