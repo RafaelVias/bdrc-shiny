@@ -242,6 +242,33 @@ server <- function(input, output, session) {
         return(rc.fit)
     })
     
+    create_rc_fig <- reactive({
+        dummy=as.data.frame(reactiveValuesToList(dummy))
+        force=as.data.frame(reactiveValuesToList(force))
+        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
+        
+        rc <- autoplot( rc_model()) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
+        
+        if(any(dim(dummy))){
+            rc <- rc + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
+        }
+        if(any(dim(force))){
+            rc <- rc + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+        }
+        if(any(dim(exclude_point))){
+            rc <- rc + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red")
+        }
+        return(rc)
+    })
+    
+    create_rc_panel <- reactive({
+        trans_rc <- autoplot( rc_model(), transformed=T, title= 'Log-transformed Rating Curve')
+        resid <- autoplot( rc_model(), type='residuals', title= 'Residual Plot')
+        f_h <- autoplot( rc_model(), type='f', title= 'Power-law Exponent')
+        sigma_eps <- autoplot( rc_model(), type='sigma_eps', title= 'Residual Standard Deviation')
+        return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
+    })
+    
     ## create headers ##
     headers <- eventReactive(input$go,{
         head_list <- list()
@@ -272,30 +299,12 @@ server <- function(input, output, session) {
     
     #### TAB 1 - Figures
     output$rc_fig <- renderPlot({
-        dummy=as.data.frame(reactiveValuesToList(dummy))
-        force=as.data.frame(reactiveValuesToList(force))
-        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
-        
-        rc_fig <- autoplot( rc_model()) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
-        
-        if(any(dim(dummy))){
-            rc_fig <- rc_fig + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
-        }
-        if(any(dim(force))){
-            rc_fig <- rc_fig + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
-        }
-        if(any(dim(exclude_point))){
-            rc_fig <- rc_fig + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red")
-        }
-        rc_fig
+        create_rc_fig()
     },height=400,width=550)
     
     output$rc_panel <- renderPlot({
-        trans_rc <- autoplot( rc_model(), transformed=T, title= 'Log-transformed Rating Curve')
-        resid <- autoplot( rc_model(), type='residuals', title= 'Residual Plot')
-        f_h <- autoplot( rc_model(), type='f', title= 'Power-law Exponent')
-        sigma_eps <- autoplot( rc_model(), type='sigma_eps', title= 'Residual Standard Deviation')
-        grid.arrange(trans_rc,resid,f_h,sigma_eps, ncol=2)
+        grid.arrange(create_rc_panel()$trans_rc,create_rc_panel()$resid,
+                     create_rc_panel()$f_h,create_rc_panel()$sigma_eps, ncol=2)
     },height=500,width=550)
     
     #### TAB 2 - Tables
@@ -346,11 +355,21 @@ server <- function(input, output, session) {
         filename <- 'bdrc_report.pdf',
         content <- function(file) {
             filename <- 'bdrc_report.pdf'
-            report_pages <- bdrc::get_report_pages( rc_model() )
+            mod <- rc_model()
+            report_pages <- bdrc::get_report_pages(mod)
+            panel_plot <- grid.arrange(create_rc_fig(),create_rc_panel()$resid,
+                                       create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
+            param <- get_param_names(class(mod),mod$run_info$c_param)
+            table <- rbind(mod$param_summary[,c('lower','median','upper')],c(mod$Deviance_summary))
+            names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+            row.names(table) <- c(sapply(1:length(param),get_param_expression),"Deviance")
+            table <- format(round(table,digits=3),nsmall=3)
+            table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
+            page1_revised <- arrangeGrob(panel_plot,table_grob,nrow=2,as.table=TRUE,heights=c(5,3),
+                                         top=textGrob(class(mod),gp=gpar(fontsize=22,facetype='bold')))
             pdf(file=filename,paper='a4',width=9,height=11)
-            for(i in 1:length(report_pages)){
-                grid.arrange(report_pages[[i]],as.table=TRUE)
-            }
+            grid.arrange(page1_revised,as.table=TRUE)
+            grid.arrange(report_pages[[2]],as.table=TRUE)
             invisible(dev.off())
             file.copy("bdrc_report.pdf", file)
         }
@@ -423,7 +442,7 @@ server <- function(input, output, session) {
     
     # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(best_model$class)
+    #     class(output$rc_fig)
     # })
     # ##############################
     
