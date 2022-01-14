@@ -92,7 +92,6 @@ ui <- shinyUI(fluidPage(
                                                                
                                                                tabPanel(span('Figures',style='font-size: 15px;'),
                                                                         textOutput('debug'),
-                                                                        h4(textOutput("rc_head")), 
                                                                         plotOutput('rc_fig',click ='rc_fig_click',dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
                                                                                    brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
                                                                         plotOutput('rc_panel')),
@@ -247,7 +246,7 @@ server <- function(input, output, session) {
         force=as.data.frame(reactiveValuesToList(force))
         exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
         
-        rc <- autoplot( rc_model()) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
+        rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
         if(any(dim(dummy))){
             rc <- rc + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
@@ -274,7 +273,6 @@ server <- function(input, output, session) {
         head_list <- list()
         head_list$tab1_head <- paste('Parameter Summary Table')
         head_list$tab2_head <- paste('Tabular Rating Curve')
-        head_list$rc_head <- paste('Rating Curve')
         head_list$rhat_head <- paste('Gelman-Rubin Statistic Plot')
         head_list$auto_head <- paste('Autocorrelation Plot')
         return(head_list)
@@ -286,9 +284,6 @@ server <- function(input, output, session) {
     })
     output$tab2_head <- renderText({
         headers()$tab2_head
-    })
-    output$rc_head <- renderText({
-        headers()$rc_head
     })
     output$rhat_head <- renderText({
         headers()$rhat_head
@@ -393,22 +388,6 @@ server <- function(input, output, session) {
                     modalButton(span("Got it!",style='font-size: 17px'))
                 )
             ))
-            # shinyalert(
-            #     title = "Heads up!",
-            #     text = "Great choice!\n We will find the appropriate rating curve model for your data.\n This is great feature of our software,\n but might take a couple of minutes complete.",
-            #     size = "s",
-            #     closeOnEsc = TRUE,
-            #     closeOnClickOutside = FALSE,
-            #     html = FALSE,
-            #     type = "success",
-            #     showConfirmButton = TRUE,
-            #     showCancelButton = FALSE,
-            #     confirmButtonText = "Got it!",
-            #     confirmButtonCol = "#AEDEF4",
-            #     timer = 0,
-            #     imageUrl = "",
-            #     animation = TRUE
-            # )
         }else{
             shinyjs::enable("checkbox2")
             shinyjs::enable("checkbox3")
