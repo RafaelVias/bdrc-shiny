@@ -251,13 +251,13 @@ server <- function(input, output, session) {
         rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
         if(any(dim(dummy))){
-            rc <- rc + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
+            rc <- rc + geom_point( data=dummy, aes(Q,W), shape=21, fill="green", col="black" ) 
         }
         if(any(dim(force))){
-            rc <- rc + geom_point( data=force, aes(Q,W), fill="blue", col="blue" )
+            rc <- rc + geom_point( data=force, aes(Q,W), shape=21, fill="steelblue1", col="black" ) 
         }
         if(any(dim(exclude_point))){
-            rc <- rc + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red" )
+            rc <- rc + geom_point( data=exclude_point, aes(Q,W), shape=21, fill="white", col="black" ) 
         }
         return(rc)
     })
@@ -297,20 +297,22 @@ server <- function(input, output, session) {
             }
         }    
         if(any(dim(dummy))){
-            trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), fill="green", col="green" )
+            trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
             resid <- resid + 
-                geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), fill="green", col="green" ) +
+                geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="green", col="black" ) +
                 geom_blank( data=dummy,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
         }
         if(any(dim(force))){
-            trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q)), fill="blue", col="blue" ) 
+            trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q) ), shape=21, fill="steelblue1", col="black" ) 
             resid <- resid + 
-                geom_point( data=force, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), fill="blue", col="blue" ) +
+                geom_point( data=force, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="steelblue1", col="black" )  +
                 geom_blank( data=force,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
         } 
         if(any(dim(exclude_point))){
-            trans_rc <- trans_rc + geom_point( data=exclude_point, aes(log(W-c),log(Q)), fill="red", col="red" ) 
-            resid <- resid + geom_point( data=exclude_point, aes(log(W-c),log(Q)-log(predict(m,newdata=W)[,'median'])), fill="red", col="red" ) 
+            trans_rc <- trans_rc + geom_point( data=exclude_point, aes(log(W-c),log(Q)), shape=21, fill="white", col="black" ) 
+            resid <- resid + 
+                geom_point( data=exclude_point, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="black" ) +
+                geom_blank( data=exclude_point, aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
         }    
         
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
