@@ -92,8 +92,12 @@ ui <- shinyUI(fluidPage(
                                                                
                                                                tabPanel(span('Figures',style='font-size: 15px;'),
                                                                         textOutput('debug'),
-                                                                        plotOutput('rc_fig',click ='rc_fig_click',dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
+                                                                        plotOutput('rc_fig',
+                                                                                   click ='rc_fig_click',
+                                                                                   dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
+                                                                                   hover = hoverOpts(id = "rc_hover",delay=100),
                                                                                    brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
+                                                                        uiOutput("rc_tooltip"),
                                                                         plotOutput('rc_panel')),
                                                                tabPanel(span('Tables',style='font-size: 15px;'),
                                                                         h4(textOutput("tab1_head")), 
@@ -450,7 +454,7 @@ server <- function(input, output, session) {
 
     # # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     list(ext_pred$h,w_min_q,d$observedData_before$W)
+    #     print(input$rc_hover)
     # })
     # # # ##############################
     
@@ -468,8 +472,6 @@ server <- function(input, output, session) {
         }
     })
     
-
-    
     observeEvent(input$rc_fig_click,{
         observedData=as.data.frame(data()$observedData_before)
         res <- nearPoints(observedData, input$rc_fig_click,xvar = "Q", yvar = "W", allRows = TRUE,threshold=5)
@@ -484,6 +486,40 @@ server <- function(input, output, session) {
             dummy$W=c(dummy$W,input$rc_fig_click$y)
             dummy$Q=c(dummy$Q,input$rc_fig_click$x)
         }
+    })
+    
+    output$rc_tooltip <- renderUI({
+        hover <- input$rc_hover
+        mod <- rc_model()
+        dat <- data()$observedData
+        c <- ifelse(is.null(mod$run_info$c_param),mod$param_summary['c','median'],mod$run_info$c_param)
+        
+        point <- nearPoints(dat, hover,xvar='Q',yvar='W', threshold = 10, maxpoints = 1)
+        if (nrow(point) == 0) return(NULL)
+        
+        # calculate point position INSIDE the image as percent of total dimensions
+        # from left (horizontal) and from top (vertical)
+        left_pct <- hover$x / max(dat$Q)
+        top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
+        
+        # calculate distance from left and bottom side of the picture in pixels
+        left_px <- hover$range$left + left_pct * 400
+        top_px <- hover$range$top + top_pct * 550
+        
+        # create style property fot tooltip
+        # background color is set so tooltip is a bit transparent
+        # z-index is set so we are sure are tooltip will be on top
+        style <- paste0("position:absolute; z-index:100;pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
+                        "left:", left_px+2, "px; top:", top_px+2, "px;")
+        
+        # actual tooltip created as wellPanel
+        wellPanel(
+            style = style,
+            p(HTML(paste0("<b> Date: </b>", point$Date, "<br/>",
+                          "<b> Water elevation: </b>", point$W, " m <br/>",
+                          "<b> Discharge: </b>", point$Q, " m^3/s<br/>")))
+        )
+        
     })
     
     
