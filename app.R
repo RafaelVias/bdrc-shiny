@@ -503,14 +503,18 @@ server <- function(input, output, session) {
         top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
         
         # calculate distance from left and bottom side of the picture in pixels
-        left_px <- hover$range$left + left_pct * 400
-        top_px <- hover$range$top + top_pct * 550
+        x_px <- 400
+        y_px <- 550
+        x_shift <- 10
+        y_shift <- 20
+        left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
+        top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
         
         # create style property fot tooltip
         # background color is set so tooltip is a bit transparent
         # z-index is set so we are sure are tooltip will be on top
         style <- paste0("position:absolute; z-index:100;pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
-                        "left:", left_px+2, "px; top:", top_px+2, "px;")
+                        "left:", left_px, "px; top:", top_px, "px;")
         
         # actual tooltip created as wellPanel
         wellPanel(
