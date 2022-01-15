@@ -132,3 +132,57 @@ clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.D
     
     return(list("wq"=wq,"observedData"=observedData,"observedData_before"=observedData_before))
 }
+
+get_residuals_dat <- function(m){
+    h_min <- min(m$data[[all.vars(m$formula)[2]]])
+    rc_dat <- merge(m$rating_curve_mean[,c('h','median','lower','upper')],m$rating_curve[,c('h','median','lower','upper')],by.x='h',by.y='h')
+    resid_dat <- merge(rc_dat[rc_dat$h>=h_min,],m$data,by.x='h',by.y=all.vars(m$formula)[2],all.x=TRUE)
+    colnames(resid_dat) <- c('h','rcm_median','rcm_lower','rcm_upper','rc_median','rc_lower','rc_upper','Q')
+    c_hat <- if(is.null(m$run_info$c_param))  median(m$c_posterior)  else  m$run_info$c_param 
+    resid_dat[,'log(h-c_hat)'] <- log(resid_dat$h-c_hat)
+    resid_dat$r_median <- log(resid_dat$Q)-log(resid_dat$rc_median)
+    # resid_dat$m_lower <- log(resid_dat$rcm_lower)-log(resid_dat$rcm_median)
+    # resid_dat$m_upper <- log(resid_dat$rcm_upper)-log(resid_dat$rcm_median)
+    resid_dat$r_lower <- log(resid_dat$rc_lower)-log(resid_dat$rc_median)
+    resid_dat$r_upper <- log(resid_dat$rc_upper)-log(resid_dat$rc_median)
+    return(resid_dat)
+}
+
+theme_bdrc <- function(...,scaling=1){
+    title_size <- scaling*12
+    text_size <- scaling*10
+    plot_title_size=scaling*15
+    theme_classic() %+replace%
+        theme( #text = element_text(family="Times", face="plain"),
+            strip.background = element_blank(),
+            strip.text.x = element_text(size = title_size),
+            axis.title.x = element_text(size=title_size),
+            axis.title.y = element_text(size=title_size,angle=90),
+            axis.text.x = element_text(size=text_size),
+            axis.text.y = element_text(size=text_size),
+            legend.text = element_text(size=text_size),
+            legend.title = element_text(size=text_size),
+            plot.title = element_text(size=plot_title_size),
+            panel.border = element_rect(colour="black",fill=NA),
+            ...)
+}
+
+plot_resid <- function(m){
+    resid_dat <- get_residuals_dat(m)
+    y_lab <- "paste('','log','(','',italic(paste('Q')),')','','-log','(','',italic(paste('',hat(paste('Q')))),')','','')"
+    x_lab <- "paste('','log','(','',italic(paste('h',phantom() - phantom(),'',hat(paste('c')))),')','','')"
+    method <- 'loess'
+    span <- 0.3
+    p <- ggplot(data=resid_dat) +
+        geom_hline(yintercept=0,size=0.8,alpha=.95) +
+        geom_point(data=resid_dat[!is.na(resid_dat$Q),],aes(.data$`log(h-c_hat)`,.data$r_median), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+        geom_smooth(aes(x=.data$`log(h-c_hat)`,y=.data$r_upper),span=span,se=FALSE,stat = "smooth",color='black',linetype='dashed',size=0.5,alpha=0.95,method=method,formula='y~x') +
+        geom_smooth(aes(x=.data$`log(h-c_hat)`,y=.data$r_lower),span=span,se=FALSE,stat = "smooth",color='black',linetype='dashed',size=0.5,alpha=0.95,method=method,formula='y~x') +
+        xlab(parse(text=x_lab)) +
+        ylab(parse(text=y_lab)) +
+        scale_x_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.01,2))) +
+        scale_y_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.05,2))) +
+        ggtitle('Residual Plot') +
+        theme_bdrc()
+    return(p)
+}

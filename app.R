@@ -250,19 +250,61 @@ server <- function(input, output, session) {
             rc <- rc + geom_point( data=dummy, aes(Q,W), fill="green", col="green" )
         }
         if(any(dim(force))){
-            rc <- rc + geom_point( data=force, aes(Q,W), fill="blue", col="blue")
+            rc <- rc + geom_point( data=force, aes(Q,W), fill="blue", col="blue" )
         }
         if(any(dim(exclude_point))){
-            rc <- rc + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red")
+            rc <- rc + geom_point( data=exclude_point, aes(Q,W), fill="red", col="red" )
         }
         return(rc)
     })
     
     create_rc_panel <- reactive({
-        trans_rc <- autoplot( rc_model(), transformed=T, title= 'Log-transformed Rating Curve')
-        resid <- autoplot( rc_model(), type='residuals', title= 'Residual Plot')
-        f_h <- autoplot( rc_model(), type='f', title= 'Power-law Exponent')
-        sigma_eps <- autoplot( rc_model(), type='sigma_eps', title= 'Residual Standard Deviation')
+        
+        dummy=as.data.frame(reactiveValuesToList(dummy))
+        force=as.data.frame(reactiveValuesToList(force))
+        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
+        
+        m <- rc_model()
+        d <- data()
+        c <- ifelse(is.null(m$run_info$c_param),m$param_summary['c','median'],m$run_info$c_param)
+        
+        trans_rc <- autoplot( m, transformed=T, title= 'Log-transformed Rating Curve')   
+        resid <- plot_resid( m )
+        f_h <- autoplot( m, type='f', title= 'Power-law Exponent')
+        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Residual Standard Deviation')
+        
+        if( any(dim(dummy)) | any(dim(force)) ){
+            if( min(dummy$W,force$W)<min(d$observedData_before$W) ){
+                
+                w_min <- min( dummy$W, force$W ) 
+                ext_seq <- seq( log(w_min), log(min(d$observedData_before$W)) , 0.001 )
+                ext_pred <- predict( m, newdata=exp(ext_seq) )
+                
+                trans_rc <- trans_rc + 
+                    geom_path( data=ext_pred, aes( log(h-c), log(median) ), alpha=0.95 ) +
+                    geom_path( data=ext_pred, aes( log(h-c), log(lower) ), linetype='dashed', alpha=0.95 ) +
+                    geom_path( data=ext_pred, aes( log(h-c), log(upper) ), linetype='dashed', alpha=0.95 ) 
+                
+                resid <- resid +
+                    geom_hline(yintercept=0,size=0.8,alpha=.95) +
+                    geom_path(data=ext_pred, aes( log(h-c), log(lower)-log(median) ),color='black',linetype='dashed',size=0.5,alpha=0.95) +
+                    geom_path(data=ext_pred, aes( log(h-c), log(upper)-log(median) ),color='black',linetype='dashed',size=0.5,alpha=0.95) 
+                
+            }
+        }    
+        if(any(dim(dummy))){
+            trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), fill="green", col="green" )
+            resid <- resid + geom_point( data=dummy, aes(log(W-c),log(Q)-log(predict(m,newdata=W)[,'median'])), fill="green", col="green" ) 
+        }
+        if(any(dim(force))){
+            trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q)), fill="blue", col="blue" ) 
+            resid <- resid + geom_point( data=force, aes(log(W-c),log(Q)-log(predict(m,newdata=W)[,'median'])), fill="blue", col="blue" ) 
+        } 
+        if(any(dim(exclude_point))){
+            trans_rc <- trans_rc + geom_point( data=exclude_point, aes(log(W-c),log(Q)), fill="red", col="red" ) 
+            resid <- resid + geom_point( data=exclude_point, aes(log(W-c),log(Q)-log(predict(m,newdata=W)[,'median'])), fill="red", col="red" ) 
+        }    
+        
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
     })
     
@@ -405,7 +447,12 @@ server <- function(input, output, session) {
             updateCheckboxInput(session, 'tournament', value = FALSE)
         }
     })
-    
+
+    # # # ########## DEBUGGER ##########
+    # output$debug <- renderPrint({
+    #     list(ext_pred$h,w_min_q,d$observedData_before$W)
+    # })
+    # # # ##############################
     
     #######Interactivity#######
     
@@ -421,11 +468,7 @@ server <- function(input, output, session) {
         }
     })
     
-    # ########## DEBUGGER ##########
-    # output$debug <- renderPrint({
-    #     class(output$rc_fig)
-    # })
-    # ##############################
+
     
     observeEvent(input$rc_fig_click,{
         observedData=as.data.frame(data()$observedData_before)
@@ -433,7 +476,7 @@ server <- function(input, output, session) {
         if(any(res$selected_) & input$clickopts=='exclude'){
             vals$keeprows=xor(vals$keeprows,res$selected_)
             exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_]))
-            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_]))   # FIX !
+            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_]))   
         }else if(input$clickopts=='force'){
             force$W=c(force$W,input$rc_fig_click$y)
             force$Q=c(force$Q,input$rc_fig_click$x)
