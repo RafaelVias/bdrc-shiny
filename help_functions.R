@@ -141,8 +141,6 @@ get_residuals_dat <- function(m){
     c_hat <- if(is.null(m$run_info$c_param))  median(m$c_posterior)  else  m$run_info$c_param 
     resid_dat[,'log(h-c_hat)'] <- log(resid_dat$h-c_hat)
     resid_dat$r_median <- log(resid_dat$Q)-log(resid_dat$rc_median)
-    # resid_dat$m_lower <- log(resid_dat$rcm_lower)-log(resid_dat$rcm_median)
-    # resid_dat$m_upper <- log(resid_dat$rcm_upper)-log(resid_dat$rcm_median)
     resid_dat$r_lower <- log(resid_dat$rc_lower)-log(resid_dat$rc_median)
     resid_dat$r_upper <- log(resid_dat$rc_upper)-log(resid_dat$rc_median)
     return(resid_dat)
@@ -175,7 +173,8 @@ plot_resid <- function(m){
     span <- 0.3
     p <- ggplot(data=resid_dat) +
         geom_hline(yintercept=0,size=0.8,alpha=.95) +
-        geom_point(data=resid_dat[!is.na(resid_dat$Q),],aes(.data$`log(h-c_hat)`,.data$r_median), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+        geom_point(data=resid_dat[!is.na(resid_dat$Q),],aes(.data$`log(h-c_hat)`, .data$r_median), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+        geom_blank(data=resid_dat[!is.na(resid_dat$Q),],aes(y=-.data$r_median) ) + 
         geom_smooth(aes(x=.data$`log(h-c_hat)`,y=.data$r_upper),span=span,se=FALSE,stat = "smooth",color='black',linetype='dashed',size=0.5,alpha=0.95,method=method,formula='y~x') +
         geom_smooth(aes(x=.data$`log(h-c_hat)`,y=.data$r_lower),span=span,se=FALSE,stat = "smooth",color='black',linetype='dashed',size=0.5,alpha=0.95,method=method,formula='y~x') +
         xlab(parse(text=x_lab)) +
