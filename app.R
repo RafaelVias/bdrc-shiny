@@ -10,7 +10,7 @@ library(gridExtra)
 library(xtable)
 library(shiny)
 library(knitr)
-library(shinyalert)
+library(writexl)
 
 source('help_functions.R')
 options(shiny.usecairo=T)
@@ -157,7 +157,9 @@ ui <- shinyUI(fluidPage(
                                                                br(),
                                                                actionButton("go", label="Create Rating Curve"),
                                                                br(),br(),br(),
-                                                               downloadButton('downloadReport',label='Download Report')
+                                                               downloadButton('downloadReport',label='Download Report'),
+                                                               br(),br(),
+                                                               downloadButton('xlsxexport',label='Export Tables as xlsx')
                                                            )
                                                     )
                                                 )
@@ -243,6 +245,7 @@ server <- function(input, output, session) {
         return(rc.fit)
     })
     
+    ### create rating curve plot ###
     create_rc_fig <- reactive({
         dummy=as.data.frame(reactiveValuesToList(dummy))
         force=as.data.frame(reactiveValuesToList(force))
@@ -262,6 +265,7 @@ server <- function(input, output, session) {
         return(rc)
     })
     
+    ### create panel plot figures ###
     create_rc_panel <- reactive({
         
         dummy=as.data.frame(reactiveValuesToList(dummy))
@@ -318,6 +322,38 @@ server <- function(input, output, session) {
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
     })
     
+    ### Tournament ###
+    observeEvent(input$tournament, {
+        if(input$tournament){
+            shinyjs::disable("checkbox2")
+            shinyjs::disable("checkbox3")
+            showModal(modalDialog(
+                title = span("Heads up!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
+                span("We will find the appropriate rating curve model for your data using model comparison of all available model types. 
+                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal rating curve 
+                     type and residual variance will be indicated on the right after running.",style='font-size: 17px'),
+                size='m',
+                easyClose = TRUE,
+                fade = TRUE,
+                footer = tagList(
+                    modalButton(span("Got it!",style='font-size: 17px'))
+                )
+            ))
+        }else{
+            shinyjs::enable("checkbox2")
+            shinyjs::enable("checkbox3")
+        }
+    })
+    observeEvent(input$go, {
+        if(input$tournament){
+            rc_type <- ifelse(grepl('g',best_model$class),'gen','trad')
+            var_type <- ifelse(grepl('0',best_model$class),'const','vary')
+            updateRadioButtons(session, inputId = "checkbox2", selected = rc_type)
+            updateRadioButtons(session, inputId = "checkbox3", selected = var_type)
+            updateCheckboxInput(session, 'tournament', value = FALSE)
+        }
+    })
+    
     ## create headers ##
     headers <- eventReactive(input$go,{
         head_list <- list()
@@ -327,8 +363,6 @@ server <- function(input, output, session) {
         head_list$auto_head <- paste('Autocorrelation Plot')
         return(head_list)
     })
-    
-    
     output$tab1_head <- renderText({
         headers()$tab1_head
     })
@@ -424,39 +458,22 @@ server <- function(input, output, session) {
         }
     )
     
-    ### Tournament ###
-    
-    observeEvent(input$tournament, {
-        if(input$tournament){
-            shinyjs::disable("checkbox2")
-            shinyjs::disable("checkbox3")
-            showModal(modalDialog(
-                title = span("Heads up!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                span("We will find the appropriate rating curve model for your data using model comparison of all available model types. 
-                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal rating curve 
-                     type and residual variance will be indicated on the right after running.",style='font-size: 17px'),
-                size='m',
-                easyClose = TRUE,
-                fade = TRUE,
-                footer = tagList(
-                    modalButton(span("Got it!",style='font-size: 17px'))
-                )
-            ))
-        }else{
-            shinyjs::enable("checkbox2")
-            shinyjs::enable("checkbox3")
+    ### Download xlsx ###
+    output$xlsxexport <- downloadHandler(
+        filename= function(){
+            paste0('bdrc_tables.xlsx')
+        },    
+        content = function(file){
+            m <- rc_model()
+            tablelist=list()
+            tablelist$Rating_Curve_Mean <- m$rating_curve_mean
+            tablelist$Rating_Curve_Predictive <- m$rating_curve
+            tablelist$Parameter_summary <- data.frame('parameters'=rownames(m$param_summary),m$param_summary)
+            tablelist$Data_and_Added_Points <- m$data
+            write_xlsx(tablelist, path=file)
         }
-    })
+    )
     
-    observeEvent(input$go, {
-        if(input$tournament){
-            rc_type <- ifelse(grepl('g',best_model$class),'gen','trad')
-            var_type <- ifelse(grepl('0',best_model$class),'const','vary')
-            updateRadioButtons(session, inputId = "checkbox2", selected = rc_type)
-            updateRadioButtons(session, inputId = "checkbox3", selected = var_type)
-            updateCheckboxInput(session, 'tournament', value = FALSE)
-        }
-    })
 
     # # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
@@ -542,5 +559,8 @@ server <- function(input, output, session) {
         force$W=NULL
         force$Q=NULL
     })
+    
+
+    
 }
 shinyApp(ui, server)
