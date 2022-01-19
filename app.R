@@ -316,9 +316,16 @@ server <- function(input, output, session) {
         }    
         if(any(dim(dummy))){
             trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
+            output$debug <- renderPrint({
+                print(max(data()$observedData$W))
+                print(dummy$W)
+                print(max(m$rating_curve$h))
+                print(predict(m,newdata=dummy$W))
+            })
             resid <- resid + 
                 geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="green", col="black" ) +
                 geom_blank( data=dummy,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
+            
         }
         if(any(dim(force))){
             trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q) ), shape=21, fill="steelblue1", col="black" ) 
@@ -491,7 +498,11 @@ server <- function(input, output, session) {
 
     # # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(input$file)
+    #     m <- rc_model()
+    #     print(max(data()$observedData$W))
+    #     print(dummy$W)
+    #     print(max(m$rating_curve$h))
+    #     print(predict(m,newdata=dummy$W)[,'median'])
     # })
     # # # ##############################
     
@@ -572,6 +583,8 @@ server <- function(input, output, session) {
         dummy$Q=NULL
         force$W=NULL
         force$Q=NULL
+        exclude_point$W <- NULL
+        exclude_point$Q <- NULL
     })
     
 
