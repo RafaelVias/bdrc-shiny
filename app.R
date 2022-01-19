@@ -41,18 +41,20 @@ ui <- shinyUI(fluidPage(
         withMathJax(),
         dashboardPage(skin = 'black',
                       
-                      dashboardHeader(title = span(#span("P(",
-                          #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
+                      dashboardHeader(title = span(
+                          span("P(",
+                               style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
                           span("Bayesian",
                                style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
                           span("|",
                                style = 'font-family: "Times"; color: gray; font-size: 28px'),
                           span("Discharge Rating Curves",
-                               style = ' font-weight: bold; color: #4AA4DE; font-size: 28px')#,#1a3263
-                          #span(")",
-                          #     style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
+                               style = ' font-weight: bold; color: #4AA4DE; font-size: 28px'),
+                          span(")",
+                               style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
                       ),
-                      titleWidth = 501,
+                      #titleWidth = 501,
+                      titleWidth = 548,
                       tags$li(a(href = 'https://github.com/sor16/bdrc',
                                 icon("github"),
                                 title = "Back to Apps Home"),
@@ -88,8 +90,6 @@ ui <- shinyUI(fluidPage(
                                                     column(width=8, 
                                                            tabBox(
                                                                id = "tabset1",width=NULL,
-                                                               
-                                                               
                                                                tabPanel(span('Figures',style='font-size: 15px;'),
                                                                         textOutput('debug'),
                                                                         plotOutput('rc_fig',
@@ -124,7 +124,6 @@ ui <- shinyUI(fluidPage(
                                                            
                                                     ),
                                                     column(width=4,
-                                                           
                                                            box(status="primary", width = NULL,
                                                                title = "Controls",
                                                                tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file'),
@@ -160,18 +159,10 @@ ui <- shinyUI(fluidPage(
                                                                actionButton("go", 
                                                                             label="Create Rating Curve",
                                                                             icon("play",style="color: dodgerblue")),
-                                                               br(),br(),#br(),
-                                                               #box(
-                                                               #span('Download Results',style='font-weight: bold;'),
-                                                               #br(),
-                                                               #downloadButton('downloadReport',label='Download Report', icon("download")),
-                                                               #br(),br(),
-                                                               #downloadButton('xlsxexport',label='Export Tables as xlsx', icon("download"))
+                                                               br(),br(),
                                                                tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download Report'),
                                                                br(),
                                                                tags$a(href = 'xlsxexport', class = "btn", icon("download"), 'Download Tables as xlsx'),
-                                                               #width=12),
-                                                               #br(),br(),
                                                            )
                                                     )
                                                 )
