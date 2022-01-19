@@ -233,16 +233,18 @@ server <- function(input, output, session) {
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
+        dummy=as.data.frame(reactiveValuesToList(dummy))
+        force=as.data.frame(reactiveValuesToList(force))
+        dat <- as.data.frame(data()$wq)
+        h_max <- as.numeric(input$h_max)
         if(input$tournament){
             m <- 'tournament'
         }else{
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
         }
-        dat <- as.data.frame(data()$wq)
-        h_max <- as.numeric(input$h_max)
         if(is.na(h_max)){
-            h_max <- NULL
+            h_max <- max(dat$W,dummy$W,force$W,exclude_point$W)
         }
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
@@ -316,12 +318,6 @@ server <- function(input, output, session) {
         }    
         if(any(dim(dummy))){
             trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
-            output$debug <- renderPrint({
-                print(max(data()$observedData$W))
-                print(dummy$W)
-                print(max(m$rating_curve$h))
-                print(predict(m,newdata=dummy$W))
-            })
             resid <- resid + 
                 geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="green", col="black" ) +
                 geom_blank( data=dummy,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
@@ -496,15 +492,17 @@ server <- function(input, output, session) {
     )
     
 
-    # # # ########## DEBUGGER ##########
+    ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     m <- rc_model()
-    #     print(max(data()$observedData$W))
-    #     print(dummy$W)
-    #     print(max(m$rating_curve$h))
-    #     print(predict(m,newdata=dummy$W)[,'median'])
+    #     # m <- rc_model()
+    #     # print(max(data()$observedData$W))
+    #     # print(dummy$W)
+    #     # print(max(m$rating_curve$h))
+    #     # print(predict(m,newdata=dummy$W)[,'median'])
+    #     # print(data()$wq[,'W'])
+    #     #print(as.data.frame(data()$wq)$W)
     # })
-    # # # ##############################
+    ##############################
     
     #######Interactivity#######
     
