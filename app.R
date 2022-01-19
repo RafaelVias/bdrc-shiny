@@ -233,18 +233,20 @@ server <- function(input, output, session) {
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
-        dummy=as.data.frame(reactiveValuesToList(dummy))
-        force=as.data.frame(reactiveValuesToList(force))
-        dat <- as.data.frame(data()$wq)
-        h_max <- as.numeric(input$h_max)
         if(input$tournament){
             m <- 'tournament'
         }else{
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
         }
+        dummy=as.data.frame(reactiveValuesToList(dummy))
+        force=as.data.frame(reactiveValuesToList(force))
+        dat <- as.data.frame(data()$wq)
+        h_max <- as.numeric(input$h_max)
         if(is.na(h_max)){
             h_max <- max(dat$W,dummy$W,force$W,exclude_point$W)
+        }else{
+            h_max <- max(h_max,dat$W,dummy$W,force$W,exclude_point$W)
         }
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
