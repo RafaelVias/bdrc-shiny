@@ -139,6 +139,7 @@ ui <- shinyUI(fluidPage(
                                                                    radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
                                                                    checkboxInput("tournament", label=span('Calculate Best Rating Curve',style='font-weight: bold;'), value=FALSE),
                                                                    width = 12),
+                                                               br(),
                                                                box(checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
                                                                    conditionalPanel(condition="input.advanced == true", 
                                                                                     radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
@@ -151,15 +152,26 @@ ui <- shinyUI(fluidPage(
                                                                                     textInput("c_parameter",label="Stage of zero discharge (c)"
                                                                                               #,placeholder = 'Optional'
                                                                                     ),
-                                                                                    actionButton('reset',label='Reset'),
+                                                                                    actionButton('reset',
+                                                                                                 label='Reset',
+                                                                                                 icon('refresh',style="color: dodgerblue")),
                                                                                     ),
                                                                    width=12),
+                                                               actionButton("go", 
+                                                                            label="Create Rating Curve",
+                                                                            icon("play",style="color: dodgerblue")),
+                                                               br(),br(),#br(),
+                                                               #box(
+                                                               #span('Download Results',style='font-weight: bold;'),
+                                                               #br(),
+                                                               #downloadButton('downloadReport',label='Download Report', icon("download")),
+                                                               #br(),br(),
+                                                               #downloadButton('xlsxexport',label='Export Tables as xlsx', icon("download"))
+                                                               tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download Report'),
                                                                br(),
-                                                               actionButton("go", label="Create Rating Curve"),
-                                                               br(),br(),br(),
-                                                               downloadButton('downloadReport',label='Download Report'),
-                                                               br(),br(),
-                                                               downloadButton('xlsxexport',label='Export Tables as xlsx')
+                                                               tags$a(href = 'xlsxexport', class = "btn", icon("download"), 'Download Tables as xlsx'),
+                                                               #width=12),
+                                                               #br(),br(),
                                                            )
                                                     )
                                                 )
@@ -195,26 +207,37 @@ server <- function(input, output, session) {
     ## data import ##
     data <- eventReactive(input$go,{
         if(is.null(input$file)){
-            stop('Please upload data in order to fit a rating curve')
+            showModal(modalDialog(
+                title = span("Whoops!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
+                span("Please upload data in order to fit a rating curve.",style='font-size: 17px'),
+                size='m',
+                easyClose = TRUE,
+                fade = TRUE,
+                footer = tagList(
+                    modalButton(span("Got it!",style='font-size: 17px'))
+                )
+            ))
+            stop()
+        }else{
+            dummy=reactiveValuesToList(dummy)
+            force=reactiveValuesToList(force)
+            cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
+                            advanced=input$advanced,exclude=input$exclude,
+                            excludedates=input$excludeDates, includedates=input$includeDates,
+                            h_max=as.numeric(input$h_max))
+            
+            if(length(vals$keeprows)==0 ){
+                vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
+            }
+            years=as.numeric(format(cleandata$observedData_before$Date, "%Y"))
+            includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
+            excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
+            daterange$keeprows=excludeindex & includeindex
+            if(nrow(cleandata$wq) < 3){
+                stop('There are less than 3 data points. Cannot fit rating curve')
+            }
+            return(cleandata)
         }
-        dummy=reactiveValuesToList(dummy)
-        force=reactiveValuesToList(force)
-        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
-                        advanced=input$advanced,exclude=input$exclude,
-                        excludedates=input$excludeDates, includedates=input$includeDates,
-                        h_max=as.numeric(input$h_max))
-        
-        if(length(vals$keeprows)==0 ){
-            vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
-        }
-        years=as.numeric(format(cleandata$observedData_before$Date, "%Y"))
-        includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
-        excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
-        daterange$keeprows=excludeindex & includeindex
-        if(nrow(cleandata$wq) < 3){
-            stop('There are less than 3 data points. Cannot fit rating curve')
-        }
-        return(cleandata)
     })
     
     ## run Models ##
@@ -477,7 +500,7 @@ server <- function(input, output, session) {
 
     # # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(input$rc_hover)
+    #     print(input$file)
     # })
     # # # ##############################
     
