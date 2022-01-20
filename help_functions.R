@@ -186,7 +186,7 @@ plot_resid <- function(m){
     return(p)
 }
 
-update_points <- function(h_max,dummy,force,exclude_point){
+update_interactive_points <- function(h_max,dummy,force,exclude_point){
     if(!is.na(h_max)){
         if(!is.null(dummy[['W']])){
             if( any( dummy[['W']] > h_max ) ){

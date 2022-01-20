@@ -202,20 +202,15 @@ server <- function(input, output, session) {
             showModal(modalDialog(
                 title = span("Whoops!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
                 span("Please upload data in order to fit a rating curve.",style='font-size: 17px'),
-                size='m',
-                easyClose = TRUE,
-                fade = TRUE,
+                size='m', easyClose = TRUE, fade = TRUE,
                 footer = tagList(
                     modalButton(span("Got it!",style='font-size: 17px'))
                 )
             ))
             stop()
         }else{
-            upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
-                                     reactiveValuesToList(dummy),
-                                     reactiveValuesToList(force),
-                                     reactiveValuesToList(exclude_point))
-            for (i in c('dummy','force','exclude_point')) assign(i,upd_pts[[i]]) 
+            upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
+            for (i in c('dummy','force','exclude_point')) assign( i, upd_pts[[i]] ) 
             
             cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
                             advanced=input$advanced,exclude=input$exclude,
@@ -228,8 +223,23 @@ server <- function(input, output, session) {
             includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
             excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
             daterange$keeprows=excludeindex & includeindex
+            
+            ########## DEBUGGER ##########
+            # output$debug <- renderPrint({
+            #     print(exclude_point)
+            # })
+            ##############################
+            
             if(nrow(cleandata$wq) < 3){
-                stop('There are less than 3 data points. Cannot fit rating curve')
+                showModal(modalDialog(
+                    title = span("Whoops!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
+                    span('There are less than 3 data points. Cannot fit rating curve.',style='font-size: 17px'),
+                    size='m', easyClose = TRUE, fade = TRUE,
+                    footer = tagList(
+                        modalButton(span("Got it!",style='font-size: 17px'))
+                    )
+                ))
+                stop()
             }
             return(cleandata)
         }
@@ -248,11 +258,8 @@ server <- function(input, output, session) {
                         ifelse(input$checkbox3=='vary','','0'))
         }
         dat <- as.data.frame(data()$wq)
-        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
-                                 reactiveValuesToList(dummy),
-                                 reactiveValuesToList(force),
-                                 reactiveValuesToList(exclude_point))
-        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
+        upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame( upd_pts[[i]] ) )
         h_max <- upd_pts$h_max
         
         if(is.na(h_max)){
@@ -277,11 +284,8 @@ server <- function(input, output, session) {
     
     ### create rating curve plot ###
     create_rc_fig <- reactive({
-        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
-                                 reactiveValuesToList(dummy),
-                                 reactiveValuesToList(force),
-                                 reactiveValuesToList(exclude_point))
-        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
+        upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame(upd_pts[[i]] ) )
         
         rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
@@ -299,11 +303,8 @@ server <- function(input, output, session) {
     
     ### create panel plot figures ###
     create_rc_panel <- reactive({
-        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
-                                 reactiveValuesToList(dummy),
-                                 reactiveValuesToList(force),
-                                 reactiveValuesToList(exclude_point))
-        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
+        upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point) )
+        for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame( upd_pts[[i]] ) )
         
         m <- rc_model()
         d <- data()
@@ -313,12 +314,6 @@ server <- function(input, output, session) {
         resid <- plot_resid( m )
         f_h <- autoplot( m, type='f', title= 'Power-law Exponent')
         sigma_eps <- autoplot( m, type='sigma_eps', title= 'Residual Standard Deviation')
-        
-        ########## DEBUGGER ##########
-        # output$debug <- renderPrint({
-        #     print(length(dummy$W))
-        # })
-        ##############################
         
         if( length(dummy$W)>0 | any(dim(force)) ){
             if( min(dummy$W,force$W)<min(d$observedData_before$W) ){
@@ -542,7 +537,7 @@ server <- function(input, output, session) {
         if(any(res$selected_) & input$clickopts=='exclude'){
             vals$keeprows=xor(vals$keeprows,res$selected_)
             exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_]))
-            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_]))   
+            exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_])) 
         }else if(input$clickopts=='force'){
             force$W=c(force$W,input$rc_fig_click$y)
             force$Q=c(force$Q,input$rc_fig_click$x)
