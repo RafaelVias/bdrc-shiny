@@ -192,6 +192,7 @@ dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
 exclude_point <- reactiveValues(Q=NULL,W=NULL)
 best_model <- reactiveValues(class=NULL)
+input_h_max <- reactiveValues(W=NA)
 
 server <- function(input, output, session) {
     
@@ -210,13 +211,16 @@ server <- function(input, output, session) {
             ))
             stop()
         }else{
-            dummy=reactiveValuesToList(dummy)
-            force=reactiveValuesToList(force)
+            upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
+                                     reactiveValuesToList(dummy),
+                                     reactiveValuesToList(force),
+                                     reactiveValuesToList(exclude_point))
+            for (i in c('dummy','force','exclude_point')) assign(i,upd_pts[[i]]) 
+            
             cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
                             advanced=input$advanced,exclude=input$exclude,
                             excludedates=input$excludeDates, includedates=input$includeDates,
                             h_max=as.numeric(input$h_max))
-            
             if(length(vals$keeprows)==0 ){
                 vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
             }
@@ -231,6 +235,10 @@ server <- function(input, output, session) {
         }
     })
     
+    observeEvent(input$go,{
+        input_h_max$W <- c(as.numeric(input$h_max))
+    })
+    
     ## run Models ##
     rc_model <- eventReactive(input$go,{
         if(input$tournament){
@@ -239,10 +247,14 @@ server <- function(input, output, session) {
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
         }
-        dummy=as.data.frame(reactiveValuesToList(dummy))
-        force=as.data.frame(reactiveValuesToList(force))
         dat <- as.data.frame(data()$wq)
-        h_max <- as.numeric(input$h_max)
+        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
+                                 reactiveValuesToList(dummy),
+                                 reactiveValuesToList(force),
+                                 reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
+        h_max <- upd_pts$h_max
+        
         if(is.na(h_max)){
             h_max <- max(dat$W,dummy$W,force$W,exclude_point$W)
         }else{
@@ -265,9 +277,11 @@ server <- function(input, output, session) {
     
     ### create rating curve plot ###
     create_rc_fig <- reactive({
-        dummy=as.data.frame(reactiveValuesToList(dummy))
-        force=as.data.frame(reactiveValuesToList(force))
-        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
+        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
+                                 reactiveValuesToList(dummy),
+                                 reactiveValuesToList(force),
+                                 reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
         
         rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
@@ -285,10 +299,11 @@ server <- function(input, output, session) {
     
     ### create panel plot figures ###
     create_rc_panel <- reactive({
-        
-        dummy=as.data.frame(reactiveValuesToList(dummy))
-        force=as.data.frame(reactiveValuesToList(force))
-        exclude_point=as.data.frame(reactiveValuesToList(exclude_point))
+        upd_pts <- update_points(reactiveValuesToList(input_h_max)$W,
+                                 reactiveValuesToList(dummy),
+                                 reactiveValuesToList(force),
+                                 reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign(i,as.data.frame(upd_pts[[i]]))
         
         m <- rc_model()
         d <- data()
@@ -299,7 +314,13 @@ server <- function(input, output, session) {
         f_h <- autoplot( m, type='f', title= 'Power-law Exponent')
         sigma_eps <- autoplot( m, type='sigma_eps', title= 'Residual Standard Deviation')
         
-        if( any(dim(dummy)) | any(dim(force)) ){
+        ########## DEBUGGER ##########
+        # output$debug <- renderPrint({
+        #     print(length(dummy$W))
+        # })
+        ##############################
+        
+        if( length(dummy$W)>0 | any(dim(force)) ){
             if( min(dummy$W,force$W)<min(d$observedData_before$W) ){
                 
                 w_min <- min( dummy$W, force$W ) 
@@ -318,20 +339,20 @@ server <- function(input, output, session) {
                 
             }
         }    
-        if(any(dim(dummy))){
+        if( length(dummy$W)>0 ){
             trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
             resid <- resid + 
                 geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="green", col="black" ) +
                 geom_blank( data=dummy,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
             
         }
-        if(any(dim(force))){
+        if( length(force$W)>0 ){
             trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q) ), shape=21, fill="steelblue1", col="black" ) 
             resid <- resid + 
                 geom_point( data=force, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="steelblue1", col="black" )  +
                 geom_blank( data=force,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
         } 
-        if(any(dim(exclude_point))){
+        if( length(exclude_point$W)>0 ){
             trans_rc <- trans_rc + geom_point( data=exclude_point, aes(log(W-c),log(Q)), shape=21, fill="white", col="black" ) 
             resid <- resid + 
                 geom_point( data=exclude_point, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="black" ) +
@@ -340,6 +361,7 @@ server <- function(input, output, session) {
         
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
     })
+    
     
     ### Tournament ###
     observeEvent(input$tournament, {
@@ -496,13 +518,7 @@ server <- function(input, output, session) {
 
     ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     # m <- rc_model()
-    #     # print(max(data()$observedData$W))
-    #     # print(dummy$W)
-    #     # print(max(m$rating_curve$h))
-    #     # print(predict(m,newdata=dummy$W)[,'median'])
-    #     # print(data()$wq[,'W'])
-    #     #print(as.data.frame(data()$wq)$W)
+
     # })
     ##############################
     

@@ -185,3 +185,30 @@ plot_resid <- function(m){
         theme_bdrc()
     return(p)
 }
+
+update_points <- function(h_max,dummy,force,exclude_point){
+    if(!is.na(h_max)){
+        if(!is.null(dummy[['W']])){
+            if( any( dummy[['W']] > h_max ) ){
+                idx <- dummy[['W']] <= h_max
+                dummy[['W']] <- dummy[['W']][idx]
+                dummy[['Q']] <- dummy[['Q']][idx]
+            } 
+        }
+        if(!is.null(force[['W']])){
+            if( any( force[['W']] > h_max ) ){
+                idx <- force[['W']] <= h_max
+                force[['W']] <- force[['W']][idx]
+                force[['Q']] <- force[['Q']][idx]
+            } 
+        }
+        if(!is.null(exclude_point[['W']])){
+            if( any( exclude_point[['W']] > h_max ) ){
+                idx <- exclude_point[['W']] <= h_max
+                exclude_point[['W']] <- exclude_point[['W']][idx]
+                exclude_point[['Q']] <- exclude_point[['Q']][idx]
+            }
+        }
+    } 
+    return(list('h_max'=h_max,'dummy'=dummy,'force'=force,'exclude_point'=exclude_point))
+}
