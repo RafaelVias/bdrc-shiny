@@ -1,10 +1,8 @@
 library(shinydashboard)
-library(googleVis)
 library(shinyWidgets)
 library(bdrc)
 library(ggplot2)
 library(readxl)
-library(Cairo)
 library(grid)
 library(gridExtra)
 library(xtable)
@@ -13,8 +11,6 @@ library(knitr)
 library(writexl)
 
 source('help_functions.R')
-options(shiny.usecairo=T)
-
 
 js <- '.nav-tabs-custom .nav-tabs li.active {
     border-top-color: #1a3263;
@@ -169,13 +165,13 @@ ui <- shinyUI(fluidPage(
                                         ),
                                         
                                         tabItem(tabName="about",
-                                                includeMarkdown("method.md")
+                                                includeMarkdown("Method.md")
                                         ),
                                         tabItem(tabName="instructions",
-                                                includeMarkdown("instructions.md")
+                                                includeMarkdown("Instructions.md")
                                         ),
                                         tabItem(tabName="bugs",
-                                                includeMarkdown("bugs.md")
+                                                includeMarkdown("Bugs.md")
                                         )
                                     )    
                       )
