@@ -362,7 +362,7 @@ server <- function(input, output, session) {
     
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     list(best_model$class,grepl('g',best_model$class),rc_type)
+    #     print(hover$x)
     # })
     # # #############################
     
@@ -559,27 +559,32 @@ server <- function(input, output, session) {
         
         # calculate point position INSIDE the image as percent of total dimensions
         # from left (horizontal) and from top (vertical)
-        left_pct <- hover$x / max(dat$Q)
-        top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
+        # left_pct <- hover$x / max(dat$Q)
+        # top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
         
         # calculate distance from left and bottom side of the picture in pixels
-        x_px <- 400
-        y_px <- 550
-        x_shift <- 10
-        y_shift <- 20
-        left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
-        top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
+        # x_px <- 400
+        # y_px <- 550
+        # x_shift <- 10
+        # y_shift <- 20
+        # left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
+        # top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
+        right_px <- 550
+        top_px <- 280
         
-        # create style property fot tooltip
+        
+        # create style property for tooltip
         # background color is set so tooltip is a bit transparent
         # z-index is set so we are sure are tooltip will be on top
-        style <- paste0("position:absolute; z-index:100;pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
-                        "left:", left_px, "px; top:", top_px, "px;")
+        style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
+                        "right:", right_px, "px; top:", top_px, "px;")
+                        #"left:", left_px, "px; top:", top_px, "px;")
         
         # actual tooltip created as wellPanel
         wellPanel(
             style = style,
             p(HTML(paste0("<b> Date: </b>", point$Date, "<br/>",
+                          "<b> Measurement quality: </b>", point$Quality, "<br/>",
                           "<b> Water elevation: </b>", point$W, " m <br/>",
                           "<b> Discharge: </b>", point$Q, " m^3/s<br/>")))
         )
