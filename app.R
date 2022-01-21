@@ -187,9 +187,7 @@ dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
 exclude_point <- reactiveValues(Q=NULL,W=NULL)
 temp_exclude_point <- reactiveValues(Q=NULL,W=NULL)
-#best_model <- reactiveValues(class=NULL)
 input_h_max <- reactiveValues(W=NA)
-#tournament_trigger <- reactiveValues(logical=FALSE)
 
 server <- function(input, output, session) {
     
@@ -562,26 +560,24 @@ server <- function(input, output, session) {
         
         # calculate point position INSIDE the image as percent of total dimensions
         # from left (horizontal) and from top (vertical)
-        # left_pct <- hover$x / max(dat$Q)
-        # top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
+        left_pct <- hover$x / max(dat$Q)
+        top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
         
         # calculate distance from left and bottom side of the picture in pixels
-        # x_px <- 400
-        # y_px <- 550
-        # x_shift <- 10
-        # y_shift <- 20
-        # left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
-        # top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
-        right_px <- 550
-        top_px <- 280
+        x_px <- 400
+        y_px <- 550
+        x_shift <- 10
+        y_shift <- 20
+        left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
+        top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
+
         
         
         # create style property for tooltip
         # background color is set so tooltip is a bit transparent
         # z-index is set so we are sure are tooltip will be on top
         style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
-                        "right:", right_px, "px; top:", top_px, "px;")
-                        #"left:", left_px, "px; top:", top_px, "px;")
+                        "left:", left_px, "px; top:", top_px, "px;")
         
         # actual tooltip created as wellPanel
         wellPanel(

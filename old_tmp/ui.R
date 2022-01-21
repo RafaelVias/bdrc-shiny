@@ -148,13 +148,13 @@ fluidPage(
                 
                 tabItem(tabName="about",
                         #includeMarkdown("About.md")
-                        includeMarkdown("method.md")
+                        includeMarkdown("Method.md")
                 ),
                 tabItem(tabName="instructions",
-                        includeMarkdown("instructions.md")
+                        includeMarkdown("Instructions.md")
                 ),
                 tabItem(tabName="bugs",
-                        includeMarkdown("bugs.md")
+                        includeMarkdown("Bugs.md")
                 )
             )    
         )
