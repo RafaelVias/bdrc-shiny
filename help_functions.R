@@ -212,3 +212,16 @@ update_interactive_points <- function(h_max,dummy,force,exclude_point){
     } 
     return(list('h_max'=h_max,'dummy'=dummy,'force'=force,'exclude_point'=exclude_point))
 }
+
+message_fun <- function(title,text){
+    showModal(modalDialog(
+        title = span(title,style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
+        span(text,style='font-size: 17px'),
+        size='m',
+        easyClose = TRUE,
+        fade = TRUE,
+        footer = tagList(
+            modalButton(span("Got it!",style='font-size: 17px'))
+        )
+    ))
+}
