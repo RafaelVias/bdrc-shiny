@@ -333,15 +333,19 @@ server <- function(input, output, session) {
             }
         }    
         if( length(exclude_point$W)>0 | any(!daterange$keeprows) | any(above_hmax$logical) ){
+            temp_exclude_point <- as.data.frame(reactiveValuesToList(temp_exclude_point))
             ex_dat <- data.frame( 'W'=c(exclude_point$W,data()$observedData_before$W[!daterange$keeprows | above_hmax$logical]), 
                                   'Q'=c(exclude_point$Q,data()$observedData_before$Q[!daterange$keeprows | above_hmax$logical]) )
             trans_rc <- trans_rc + 
                 geom_point( data= ex_dat, aes(log(W-c),log(Q)), shape=21, fill="white", col="black", alpha=.3 ) +
-                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes(log(W-c),log(Q)), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) 
+                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes(log(W-c),log(Q)), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+                if(length(temp_exclude_point$W)>0) geom_point( data = temp_exclude_point, aes(log(W-c),log(Q)), shape=21, fill="white", col="gray80" ) 
+                
             resid <- resid + 
                 geom_point( data=ex_dat, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="black", alpha=.3 ) +
                 geom_blank( data=ex_dat, aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) +
-                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) 
+                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+                if(length(temp_exclude_point$W)>0) geom_point( data = temp_exclude_point, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="gray80" ) 
         }    
         if( length(dummy$W)>0 ){
             trans_rc <- trans_rc + 
