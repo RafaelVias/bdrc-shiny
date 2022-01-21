@@ -29,7 +29,7 @@ rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
 auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
 m_item <- ".sidebar-menu li a { font-size: 15px; }"
 
-rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
+rmdfiles <- c('Method.Rmd','Instructions.Rmd','bugs.Rmd')
 sapply(rmdfiles, knit, quiet = T)
 
 ui <- shinyUI(fluidPage(
