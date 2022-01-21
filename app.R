@@ -29,7 +29,7 @@ rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
 auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
 m_item <- ".sidebar-menu li a { font-size: 15px; }"
 
-rmdfiles <- c('Method.Rmd','Instructions.Rmd','bugs.Rmd')
+rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
 sapply(rmdfiles, knit, quiet = T)
 
 ui <- shinyUI(fluidPage(
@@ -145,9 +145,8 @@ ui <- shinyUI(fluidPage(
                                                                                     checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
                                                                                     conditionalPanel(condition="input.exclude == true",
                                                                                                      dateRangeInput("excludeDates", label = "Date range",start=Sys.Date()-1,end=Sys.Date()-1)),
-                                                                                    textInput("h_max",label="Maximum stage (m)"),
-                                                                                    textInput("c_parameter",label="Stage of zero discharge (c)"
-                                                                                              #,placeholder = 'Optional'
+                                                                                    textInput("h_max",label="Maximum water elevation (m)"),
+                                                                                    textInput("c_parameter",label="Water elevation of zero discharge (m)"
                                                                                     ),
                                                                                     actionButton('reset',
                                                                                                  label='Reset',
@@ -170,7 +169,7 @@ ui <- shinyUI(fluidPage(
                                                 includeMarkdown("Instructions.md")
                                         ),
                                         tabItem(tabName="bugs",
-                                                includeMarkdown("bugs.md")
+                                                includeMarkdown("Bugs.md")
                                         )
                                     )    
                       )
