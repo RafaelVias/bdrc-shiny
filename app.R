@@ -36,7 +36,6 @@ ui <- shinyUI(fluidPage(
         shinyjs::useShinyjs(),
         withMathJax(),
         dashboardPage(skin = 'black',
-                      
                       dashboardHeader(title = span(
                           span("P(",
                                style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
@@ -63,10 +62,10 @@ ui <- shinyUI(fluidPage(
                               class = "dropdown")),
                       dashboardSidebar(
                           sidebarMenu(
-                              menuItem("Rating Curve Builder", tabName = "app", icon = icon("water")),
+                              menuItem("Rating curve builder", tabName = "app", icon = icon("water")),
                               menuItem("How to use the app?", tabName = "instructions", icon = icon("life-ring")),
                               menuItem("Background", tabName = "about", icon = icon("book")),
-                              menuItem("Report a Bug", tabName = "bugs", icon = icon("bug"))
+                              menuItem("Report a bug", tabName = "bugs", icon = icon("bug"))
                           )
                       ),
                       dashboardBody(tags$style(js),
@@ -124,29 +123,29 @@ ui <- shinyUI(fluidPage(
                                                                tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file'),
                                                                    br(),
                                                                    br(),
-                                                                   fileInput('file', 'Upload Excel File',
+                                                                   fileInput('file', 'Upload excel file',
                                                                              accept=c('application/vnd.ms-excel',
                                                                                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                                                                       '.xls',
                                                                                       '.xlsx')),
                                                                actionButton("go", 
-                                                                            label="Create Rating Curve",
+                                                                            label="Create rating curve",
                                                                             icon("play",style="color: dodgerblue")),
                                                                br(),br(),br(),
-                                                               box(radioButtons(inputId="checkbox2", label="Rating Curve Type",choices=list("Generalized Power-law"='gen',"Power-law"='trad'),selected="gen"),
-                                                                   radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
-                                                                   checkboxInput("tournament", label=span('Calculate Best Rating Curve',style='font-weight: bold;'), value=FALSE),
+                                                               box(radioButtons(inputId="checkbox2", label="Rating curve type",choices=list("Generalized power-law"='gen',"Power-law"='trad'),selected="gen"),
+                                                                   radioButtons(inputId="checkbox3", label="Error variance",choices=list("Varying with water elevation" = 'vary',"Constant" = 'const'),selected='vary'),
+                                                                   checkboxInput("tournament", label=span('Calculate best rating curve',style='font-weight: bold;'), value=FALSE),
                                                                    width = 12),
                                                                br(),
-                                                               box(checkboxInput("advanced", label=span('Advanced Settings',style='font-weight: bold;'), value=FALSE),
+                                                               box(checkboxInput("advanced", label=span('Advanced settings',style='font-weight: bold;'), value=FALSE),
                                                                    conditionalPanel(condition="input.advanced == true", 
                                                                                     radioButtons('clickopts',label='Use click to:',choices=list('Zoom'='zoom','Add dummypoint'='dummy','Add forcepoint'='force','Exclude point'='exclude'),selected='zoom'),
-                                                                                    sliderInput("includeDates", label = "Date Range Included", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
+                                                                                    sliderInput("includeDates", label = "Date range included", min = 1950, max = as.numeric(format(Sys.Date(), "%Y")),
                                                                                                 value=c(1950,as.numeric(format(Sys.Date(), "%Y"))),sep=""),
                                                                                     checkboxInput("exclude", label=span("Exclude certain period",style='font-weight: bold;'), value=FALSE),
                                                                                     conditionalPanel(condition="input.exclude == true",
-                                                                                                     dateRangeInput("excludeDates", label = "Date Range",start=Sys.Date()-1,end=Sys.Date()-1)),
-                                                                                    textInput("h_max",label="Maximum Stage (m)"),
+                                                                                                     dateRangeInput("excludeDates", label = "Date range",start=Sys.Date()-1,end=Sys.Date()-1)),
+                                                                                    textInput("h_max",label="Maximum stage (m)"),
                                                                                     textInput("c_parameter",label="Stage of zero discharge (c)"
                                                                                               #,placeholder = 'Optional'
                                                                                     ),
@@ -156,9 +155,9 @@ ui <- shinyUI(fluidPage(
                                                                                     ),
                                                                    width=12),
                                                                br(),br(),
-                                                               tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download Report'),
+                                                               tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download report'),
                                                                br(),
-                                                               tags$a(href = 'xlsxexport', class = "btn", icon("download"), 'Download Tables as xlsx'),
+                                                               tags$a(href = 'xlsxexport', class = "btn", icon("download"), 'Download tables as xlsx'),
                                                            )
                                                     )
                                                 )
@@ -171,7 +170,7 @@ ui <- shinyUI(fluidPage(
                                                 includeMarkdown("Instructions.md")
                                         ),
                                         tabItem(tabName="bugs",
-                                                includeMarkdown("Bugs.md")
+                                                includeMarkdown("bugs.md")
                                         )
                                     )    
                       )
@@ -280,7 +279,7 @@ server <- function(input, output, session) {
         upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
         for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame(upd_pts[[i]] ) )
         
-        rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
+        rc <- autoplot( rc_model(), title= 'Interactive rating curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
         if( length(exclude_point$W)>0 | any(!daterange$keeprows) | any(above_hmax$logical) ){
             ex_dat <- data.frame( 'W'=c(exclude_point$W,data()$observedData_before$W[!daterange$keeprows | above_hmax$logical]), 
@@ -308,10 +307,10 @@ server <- function(input, output, session) {
         d <- data()
         c <- ifelse(is.null(m$run_info$c_param),m$param_summary['c','median'],m$run_info$c_param)
         
-        trans_rc <- autoplot( m, transformed=T, title= 'Log-transformed Rating Curve')   
+        trans_rc <- autoplot( m, transformed=T, title= 'Log-transformed rating curve')   
         resid <- plot_resid( m )
-        f_h <- autoplot( m, type='f', title= 'Power-law Exponent')
-        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Residual Standard Deviation')
+        f_h <- autoplot( m, type='f', title= 'Power-law exponent')
+        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Error standard deviation')
     
         
         if( length(dummy$W)>0 | length(force$W)>0 | length(exclude_point$W)>0 | any(!daterange$keeprows) ){
@@ -385,10 +384,10 @@ server <- function(input, output, session) {
     ## create headers ##
     headers <- eventReactive(input$go,{
         head_list <- list()
-        head_list$tab1_head <- paste('Parameter Summary Table')
-        head_list$tab2_head <- paste('Tabular Rating Curve')
-        head_list$rhat_head <- paste('Gelman-Rubin Statistic Plot')
-        head_list$auto_head <- paste('Autocorrelation Plot')
+        head_list$tab1_head <- paste('Parameter summary table')
+        head_list$tab2_head <- paste('Tabular rating curve')
+        head_list$rhat_head <- paste('Gelman-Rubin statistic plot')
+        head_list$auto_head <- paste('Autocorrelation plot')
         return(head_list)
     })
     output$tab1_head <- renderText({

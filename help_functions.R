@@ -181,7 +181,7 @@ plot_resid <- function(m){
         ylab(parse(text=y_lab)) +
         scale_x_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.01,2))) +
         scale_y_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.05,2))) +
-        ggtitle('Residual Plot') +
+        ggtitle('Residual plot') +
         theme_bdrc()
     return(p)
 }
