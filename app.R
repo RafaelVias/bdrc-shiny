@@ -84,13 +84,12 @@ ui <- shinyUI(fluidPage(
                                     tags$style(auto_head_style),
                                     tags$style(rc_head_style),
                                     tabItems(
-                                        
                                         tabItem(tabName="app",
                                                 fluidRow(
                                                     column(width=8, 
                                                            tabBox(
                                                                id = "tabset1",width=NULL,
-                                                               tabPanel(span('Figures',style='font-size: 15px;'),
+                                                               tabPanel(span('Figures',style='font-size: 16px;'),
                                                                         textOutput('debug'),
                                                                         plotOutput('rc_fig',
                                                                                    click ='rc_fig_click',
@@ -99,12 +98,12 @@ ui <- shinyUI(fluidPage(
                                                                                    brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
                                                                         uiOutput("rc_tooltip"),
                                                                         plotOutput('rc_panel')),
-                                                               tabPanel(span('Tables',style='font-size: 15px;'),
+                                                               tabPanel(span('Tables',style='font-size: 16px;'),
                                                                         h4(textOutput("tab1_head")), 
                                                                         uiOutput('param_sum'),
                                                                         h4(textOutput("tab2_head")),
                                                                         plotOutput('rc_table')),
-                                                               tabPanel(span('Convergence diagnostics',style='font-size: 15px;'),
+                                                               tabPanel(span('Convergence diagnostics',style='font-size: 16px;'),
                                                                         h4(textOutput("rhat_head")),
                                                                         plotOutput('conv_diag1'),
                                                                         h4(textOutput("auto_head")),
@@ -134,6 +133,10 @@ ui <- shinyUI(fluidPage(
                                                                                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                                                                       '.xls',
                                                                                       '.xlsx')),
+                                                               actionButton("go", 
+                                                                            label="Create Rating Curve",
+                                                                            icon("play",style="color: dodgerblue")),
+                                                               br(),br(),br(),
                                                                box(radioButtons(inputId="checkbox2", label="Rating Curve Type",choices=list("Generalized Power-law"='gen',"Power-law"='trad'),selected="gen"),
                                                                    radioButtons(inputId="checkbox3", label="Residual variance",choices=list("Stage varying" = 'vary',"Constant" = 'const'),selected='vary'),
                                                                    checkboxInput("tournament", label=span('Calculate Best Rating Curve',style='font-weight: bold;'), value=FALSE),
@@ -156,9 +159,6 @@ ui <- shinyUI(fluidPage(
                                                                                                  icon('refresh',style="color: dodgerblue")),
                                                                                     ),
                                                                    width=12),
-                                                               actionButton("go", 
-                                                                            label="Create Rating Curve",
-                                                                            icon("play",style="color: dodgerblue")),
                                                                br(),br(),
                                                                tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download Report'),
                                                                br(),
@@ -185,32 +185,29 @@ ui <- shinyUI(fluidPage(
 
 ################## SERVER ##################################################
 
-vals<-reactiveValues(keeprows=NULL)
-daterange=reactiveValues(keeprows=NULL)
+vals <- reactiveValues(keeprows=NULL)
+daterange <- reactiveValues(keeprows=NULL)
+above_hmax <- reactiveValues(logical=NULL)
 ranges <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
 exclude_point <- reactiveValues(Q=NULL,W=NULL)
-best_model <- reactiveValues(class=NULL)
+temp_exclude_point <- reactiveValues(Q=NULL,W=NULL)
+#best_model <- reactiveValues(class=NULL)
 input_h_max <- reactiveValues(W=NA)
+#tournament_trigger <- reactiveValues(logical=FALSE)
 
 server <- function(input, output, session) {
     
     ## data import ##
     data <- eventReactive(input$go,{
         if(is.null(input$file)){
-            showModal(modalDialog(
-                title = span("Whoops!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                span("Please upload data in order to fit a rating curve.",style='font-size: 17px'),
-                size='m', easyClose = TRUE, fade = TRUE,
-                footer = tagList(
-                    modalButton(span("Got it!",style='font-size: 17px'))
-                )
-            ))
+            message_fun(title="Whoops!",text="Please upload data in order to fit a rating curve.")
             stop()
         }else{
             upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
             for (i in c('dummy','force','exclude_point')) assign( i, upd_pts[[i]] ) 
+            h_max <- upd_pts$h_max
             
             cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
                             advanced=input$advanced,exclude=input$exclude,
@@ -219,26 +216,14 @@ server <- function(input, output, session) {
             if(length(vals$keeprows)==0 ){
                 vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
             }
-            years=as.numeric(format(cleandata$observedData_before$Date, "%Y"))
-            includeindex=years<=input$includeDates[2] & years >= input$includeDates[1]
-            excludeindex=cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
-            daterange$keeprows=excludeindex & includeindex
-            
-            ########## DEBUGGER ##########
-            # output$debug <- renderPrint({
-            #     print(exclude_point)
-            # })
-            ##############################
+            years <- as.numeric(format(cleandata$observedData_before$Date, "%Y"))
+            includeindex <- years<=input$includeDates[2] & years >= input$includeDates[1]
+            excludeindex <- cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
+            daterange$keeprows <- excludeindex & includeindex
+            above_hmax$logical <- if(is.na(h_max)) rep(F,nrow(cleandata$observedData_before)) else ( cleandata$observedData_before$W > h_max )
             
             if(nrow(cleandata$wq) < 3){
-                showModal(modalDialog(
-                    title = span("Whoops!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                    span('There are less than 3 data points. Cannot fit rating curve.',style='font-size: 17px'),
-                    size='m', easyClose = TRUE, fade = TRUE,
-                    footer = tagList(
-                        modalButton(span("Got it!",style='font-size: 17px'))
-                    )
-                ))
+                message_fun(title="Whoops!",text='There are less than 3 data points. Cannot fit rating curve.')
                 stop()
             }
             return(cleandata)
@@ -247,12 +232,19 @@ server <- function(input, output, session) {
     
     observeEvent(input$go,{
         input_h_max$W <- c(as.numeric(input$h_max))
+        temp_exclude_point$W <- NULL
+        temp_exclude_point$Q <- NULL
     })
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
         if(input$tournament){
             m <- 'tournament'
+            if( length(force$W)>0 ){
+                message_fun(title='Whoops!',text = 'Unfortunately our model selection algorithm does NOT support forcepoints for now. Your forcepoints will be removed for the model comparison but new forcepoints can be addded to the selected model.')
+                force$W=NULL
+                force$Q=NULL
+            }
         }else{
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
@@ -263,9 +255,9 @@ server <- function(input, output, session) {
         h_max <- upd_pts$h_max
         
         if(is.na(h_max)){
-            h_max <- max(dat$W,dummy$W,force$W,exclude_point$W)
+            h_max <- max(dat$W,data()$observedData_before$W,dummy$W,force$W,exclude_point$W)
         }else{
-            h_max <- max(h_max,dat$W,dummy$W,force$W,exclude_point$W)
+            h_max <- max(h_max,dat$W,data()$observedData_before$W,dummy$W,force$W,exclude_point$W)
         }
         c_parameter <- as.numeric(input$c_parameter)
         if(is.na(c_parameter)){
@@ -275,7 +267,11 @@ server <- function(input, output, session) {
         if(m=='tournament'){
             rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat)
             rc.fit <- rc.fit$winner
-            best_model$class <- class(rc.fit)
+            rc_type <- if(grepl('g',class(rc.fit))) 'gen' else 'trad'
+            var_type <- if(grepl('0',class(rc.fit))) 'const' else 'vary'
+            updateRadioButtons(session, inputId = "checkbox2", selected = rc_type)
+            updateRadioButtons(session, inputId = "checkbox3", selected = var_type)
+            updateCheckboxInput(session, 'tournament', value = FALSE)
         }else{
             rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat, forcepoint=data()$observedData$Quality=='forcepoint')
         }
@@ -284,19 +280,25 @@ server <- function(input, output, session) {
     
     ### create rating curve plot ###
     create_rc_fig <- reactive({
+        temp_exclude_point <- as.data.frame(reactiveValuesToList(temp_exclude_point))
         upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
         for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame(upd_pts[[i]] ) )
         
         rc <- autoplot( rc_model(), title= 'Rating Curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
-        if(any(dim(dummy))){
+        if( length(exclude_point$W)>0 | any(!daterange$keeprows) | any(above_hmax$logical) ){
+            ex_dat <- data.frame( 'W'=c(exclude_point$W,data()$observedData_before$W[!daterange$keeprows | above_hmax$logical]), 
+                                  'Q'=c(exclude_point$Q,data()$observedData_before$Q[!daterange$keeprows | above_hmax$logical]) )
+            rc <- rc + 
+                geom_point( data = ex_dat, aes(Q,W), shape=21, fill="white", col="black", alpha=0.3 ) +
+                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes(Q,W), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) +
+                if(length(temp_exclude_point$W)>0) geom_point( data = temp_exclude_point, aes(Q,W), shape=21, fill="white", col="gray80" ) 
+        }
+        if( length(dummy$W)>0 ){
             rc <- rc + geom_point( data=dummy, aes(Q,W), shape=21, fill="green", col="black" ) 
         }
-        if(any(dim(force))){
-            rc <- rc + geom_point( data=force, aes(Q,W), shape=21, fill="steelblue1", col="black" ) 
-        }
-        if(any(dim(exclude_point))){
-            rc <- rc + geom_point( data=exclude_point, aes(Q,W), shape=21, fill="white", col="black" ) 
+        if( length(force$W)>0 ){
+            rc <- rc + geom_point( data=force, aes(Q,W), shape=21, fill="tomato", col="black" ) 
         }
         return(rc)
     })
@@ -314,12 +316,13 @@ server <- function(input, output, session) {
         resid <- plot_resid( m )
         f_h <- autoplot( m, type='f', title= 'Power-law Exponent')
         sigma_eps <- autoplot( m, type='sigma_eps', title= 'Residual Standard Deviation')
+    
         
-        if( length(dummy$W)>0 | any(dim(force)) ){
-            if( min(dummy$W,force$W)<min(d$observedData_before$W) ){
+        if( length(dummy$W)>0 | length(force$W)>0 | length(exclude_point$W)>0 | any(!daterange$keeprows) ){
+            int_h_min <- min(dummy$W,force$W,exclude_point$W,d$observedData_before$W[!daterange$keeprows])
+            if( int_h_min < min(d$wq[,'W']) ){
                 
-                w_min <- min( dummy$W, force$W ) 
-                ext_seq <- seq( log(w_min), log(min(d$observedData_before$W)) , 0.001 )
+                ext_seq <- seq( log(int_h_min), log(min(d$wq[,'W'])) , 0.001 )
                 ext_pred <- predict( m, newdata=exp(ext_seq) )
                 
                 trans_rc <- trans_rc + 
@@ -334,61 +337,54 @@ server <- function(input, output, session) {
                 
             }
         }    
+        if( length(exclude_point$W)>0 | any(!daterange$keeprows) | any(above_hmax$logical) ){
+            ex_dat <- data.frame( 'W'=c(exclude_point$W,data()$observedData_before$W[!daterange$keeprows | above_hmax$logical]), 
+                                  'Q'=c(exclude_point$Q,data()$observedData_before$Q[!daterange$keeprows | above_hmax$logical]) )
+            trans_rc <- trans_rc + 
+                geom_point( data= ex_dat, aes(log(W-c),log(Q)), shape=21, fill="white", col="black", alpha=.3 ) +
+                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes(log(W-c),log(Q)), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) 
+            resid <- resid + 
+                geom_point( data=ex_dat, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="black", alpha=.3 ) +
+                geom_blank( data=ex_dat, aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) +
+                geom_point( data = as.data.frame(data()$wq[,c('W','Q')]), aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), size=.9, shape=21, fill="gray60", color="black",alpha=0.95) 
+        }    
         if( length(dummy$W)>0 ){
-            trans_rc <- trans_rc + geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
+            trans_rc <- trans_rc + 
+                geom_point( data=dummy, aes(log(W-c),log(Q)), shape=21, fill="green", col="black" )
             resid <- resid + 
                 geom_point( data=dummy, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="green", col="black" ) +
                 geom_blank( data=dummy,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
-            
         }
         if( length(force$W)>0 ){
-            trans_rc <- trans_rc + geom_point( data=force, aes(log(W-c),log(Q) ), shape=21, fill="steelblue1", col="black" ) 
+            trans_rc <- trans_rc + 
+                geom_point( data=force, aes(log(W-c),log(Q) ), shape=21, fill="tomato", col="black" ) 
             resid <- resid + 
-                geom_point( data=force, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="steelblue1", col="black" )  +
-                geom_blank( data=force,aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
+                geom_point( data=force, aes( log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="tomato", col="black" )  +
+                geom_blank( data=force, aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
         } 
-        if( length(exclude_point$W)>0 ){
-            trans_rc <- trans_rc + geom_point( data=exclude_point, aes(log(W-c),log(Q)), shape=21, fill="white", col="black" ) 
-            resid <- resid + 
-                geom_point( data=exclude_point, aes(log(W-c), log(Q)-log(predict(m,newdata=W)[,'median']) ), shape=21, fill="white", col="black" ) +
-                geom_blank( data=exclude_point, aes( y = log(predict(m,newdata=W)[,'median'])-log(Q) ) ) 
-        }    
-        
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
     })
     
+    # # ########## DEBUGGER ##########
+    # output$debug <- renderPrint({
+    #     list(best_model$class,grepl('g',best_model$class),rc_type)
+    # })
+    # # #############################
     
     ### Tournament ###
     observeEvent(input$tournament, {
         if(input$tournament){
             shinyjs::disable("checkbox2")
             shinyjs::disable("checkbox3")
-            showModal(modalDialog(
-                title = span("Heads up!",style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                span("We will find the appropriate rating curve model for your data using model comparison of all available model types. 
+            message_fun(title="Heads up!",text="We will find the appropriate rating curve model for your data using model comparison of all available model types. 
                      This is a great feature of our software, but might take a couple of minutes to complete. The optimal rating curve 
-                     type and residual variance will be indicated on the right after running.",style='font-size: 17px'),
-                size='m',
-                easyClose = TRUE,
-                fade = TRUE,
-                footer = tagList(
-                    modalButton(span("Got it!",style='font-size: 17px'))
-                )
-            ))
+                     type and residual variance will be indicated on the right after running.")
         }else{
             shinyjs::enable("checkbox2")
             shinyjs::enable("checkbox3")
         }
     })
-    observeEvent(input$go, {
-        if(input$tournament){
-            rc_type <- ifelse(grepl('g',best_model$class),'gen','trad')
-            var_type <- ifelse(grepl('0',best_model$class),'const','vary')
-            updateRadioButtons(session, inputId = "checkbox2", selected = rc_type)
-            updateRadioButtons(session, inputId = "checkbox3", selected = var_type)
-            updateCheckboxInput(session, 'tournament', value = FALSE)
-        }
-    })
+
     
     ## create headers ##
     headers <- eventReactive(input$go,{
@@ -510,13 +506,6 @@ server <- function(input, output, session) {
         }
     )
     
-
-    ########## DEBUGGER ##########
-    # output$debug <- renderPrint({
-
-    # })
-    ##############################
-    
     #######Interactivity#######
     
     # If so, zoom to the brush bounds; if not, reset the zoom.
@@ -533,15 +522,31 @@ server <- function(input, output, session) {
     
     observeEvent(input$rc_fig_click,{
         observedData=as.data.frame(data()$observedData_before)
-        res <- nearPoints(observedData, input$rc_fig_click,xvar = "Q", yvar = "W", allRows = TRUE,threshold=5)
+        res <- nearPoints(observedData, input$rc_fig_click, xvar = "Q", yvar = "W", allRows = TRUE, threshold=5)
         if(any(res$selected_) & input$clickopts=='exclude'){
             vals$keeprows=xor(vals$keeprows,res$selected_)
             exclude_point$W=c(exclude_point$W,as.numeric(observedData$W[res$selected_]))
             exclude_point$Q=c(exclude_point$Q,as.numeric(observedData$Q[res$selected_])) 
+            temp_exclude_point$W=c(temp_exclude_point$W,as.numeric(observedData$W[res$selected_]))
+            temp_exclude_point$Q=c(temp_exclude_point$Q,as.numeric(observedData$Q[res$selected_])) 
         }else if(input$clickopts=='force'){
+            if( !is.null(input_h_max$W) & !is.na(input_h_max$W) ){
+                if( input$rc_fig_click$y > input_h_max$W ){
+                    updateTextInput(session, 'h_max', value = format(round(input$rc_fig_click$y,4)+1e-4,nsmall=4))
+                    input_h_max$W <- round(input$rc_fig_click$y,4)+1e-4
+                    message_fun(title="Heads up!",text="You added a forcepoint above your pre-selected maximum stage value. We have updated the maximum stage value to be the same as the newly added forcepoint.")
+                }
+            } 
             force$W=c(force$W,input$rc_fig_click$y)
             force$Q=c(force$Q,input$rc_fig_click$x)
         }else if(input$clickopts=='dummy'){
+            if( !is.null(input_h_max$W) & !is.na(input_h_max$W) ){
+                if( input$rc_fig_click$y > input_h_max$W ){
+                    updateTextInput(session, 'h_max', value = format(round(input$rc_fig_click$y,4)+1e-4,nsmall=4))
+                    input_h_max$W <- round(input$rc_fig_click$y,4)+1e-4
+                    message_fun(title="Heads up!",text="You added a dummypoint above your pre-selected maximum stage value. We have updated the maximum stage value to be the same as the newly added dummypoint")
+                }
+            }
             dummy$W=c(dummy$W,input$rc_fig_click$y)
             dummy$Q=c(dummy$Q,input$rc_fig_click$x)
         }
