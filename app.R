@@ -552,7 +552,7 @@ server <- function(input, output, session) {
     output$rc_tooltip <- renderUI({
         dat <- data()$observedData
         hover <- input$rc_hover
-        x_px <- 550
+        x_px <- 640
         y_px <- 400
         point <- nearPoints(dat, hover,xvar='Q',yvar='W', threshold = 5, maxpoints = 1)
         if (nrow(point) == 0) return(NULL)
@@ -566,9 +566,9 @@ server <- function(input, output, session) {
         wellPanel(
             style = style,
             p(HTML(paste0("<b> Date: </b>", point$Date, "<br/>",
-                          "<b> Measurement quality: </b>", point$Quality, "<br/>",
-                          "<b> Water elevation: </b>", point$W, " m <br/>",
-                          "<b> Discharge: </b>", point$Q, " m^3/s<br/>")))
+                          "<b> Quality: </b>", point$Quality, "<br/>",
+                          "<b> Water elevation: </b>", format(round(point$W,3),nsmall=3), " m <br/>",
+                          "<b> Discharge: </b>", format(round(point$Q,3),nsmall=3), " m^3/s<br/>")))
         )
         
     })

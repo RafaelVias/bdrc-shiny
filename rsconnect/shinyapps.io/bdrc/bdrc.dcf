@@ -5,10 +5,9 @@ account: bdrc
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4020063
-bundleId: 5488736
+bundleId: 5496475
 url: https://bdrc.shinyapps.io/bdrc/
-when: 1642681992.89809
-lastSyncTime: 1642681992.89811
+when: 1642856186.75671
+lastSyncTime: 1642856186.75672
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: bdrc_report.pdf|Bugs.md|Instructions.md|Method.md|old_tmp/server.R|old_tmp/ui.R
