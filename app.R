@@ -33,6 +33,7 @@ rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
 sapply(rmdfiles, knit, quiet = T)
 
 ui <- shinyUI(fluidPage(
+        title='Bayesian Discharge Rating Curves - bdrc',
         shinyjs::useShinyjs(),
         withMathJax(),
         dashboardPage(skin = 'black',
