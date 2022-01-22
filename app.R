@@ -363,7 +363,8 @@ server <- function(input, output, session) {
     
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(hover$x)
+    #     print(input$rc_hover$coords_css)
+    #     print(input$rc_hover$coords_css)
     # })
     # # #############################
     
@@ -549,35 +550,17 @@ server <- function(input, output, session) {
     })
     
     output$rc_tooltip <- renderUI({
-        
-        hover <- input$rc_hover
-        mod <- rc_model()
         dat <- data()$observedData
-        c <- ifelse(is.null(mod$run_info$c_param),mod$param_summary['c','median'],mod$run_info$c_param)
-        
-        point <- nearPoints(dat, hover,xvar='Q',yvar='W', threshold = 10, maxpoints = 1)
+        hover <- input$rc_hover
+        x_px <- 550
+        y_px <- 400
+        point <- nearPoints(dat, hover,xvar='Q',yvar='W', threshold = 5, maxpoints = 1)
         if (nrow(point) == 0) return(NULL)
-        
-        # calculate point position INSIDE the image as percent of total dimensions
-        # from left (horizontal) and from top (vertical)
-        left_pct <- hover$x / max(dat$Q)
-        top_pct <- (max(dat$W) - hover$y) / (max(dat$W) - c)
-        
-        # calculate distance from left and bottom side of the picture in pixels
-        x_px <- 400
-        y_px <- 550
-        x_shift <- 10
-        y_shift <- 20
-        left_px <- hover$range$left + x_shift + left_pct * (x_px-x_shift)
-        top_px <- hover$range$top + y_shift + top_pct * (y_px-y_shift)
 
-        
-        
-        # create style property for tooltip
-        # background color is set so tooltip is a bit transparent
-        # z-index is set so we are sure are tooltip will be on top
-        style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
-                        "left:", left_px, "px; top:", top_px, "px;")
+        # style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
+        #                 "left:", x_px-0.42*x_px, "px; top:", y_px-0.28*y_px, "px;")
+        style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(255, 255, 255, 1); ",
+                        "left:", x_px-0.42*x_px, "px; top:", y_px-0.28*y_px, "px;")
         
         # actual tooltip created as wellPanel
         wellPanel(
