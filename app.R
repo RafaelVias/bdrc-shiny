@@ -1,6 +1,7 @@
 library(shinydashboard)
+library(shinyBS)
 library(shinyWidgets)
-library(bdrc)
+# library(bdrc)
 library(ggplot2)
 library(readxl)
 library(grid)
@@ -9,8 +10,21 @@ library(xtable)
 library(shiny)
 library(knitr)
 library(writexl)
+library(parallel)
 
-source('help_functions.R')
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/data.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/extract_draws.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm0.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/help_functions.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm_methods.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm0.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/report.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament_methods.R")
+source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament.R")
+
+source('shiny_help_functions.R')
 
 js <- '.nav-tabs-custom .nav-tabs li.active {
     border-top-color: #1a3263;
@@ -38,19 +52,15 @@ ui <- shinyUI(fluidPage(
         withMathJax(),
         dashboardPage(skin = 'black',
                       dashboardHeader(title = span(
-                          span("P(",
-                               style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px'),
                           span("Bayesian",
                                style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
                           span("|",
                                style = 'font-family: "Times"; color: gray; font-size: 28px'),
                           span("Discharge Rating Curves",
-                               style = ' font-weight: bold; color: #4AA4DE; font-size: 28px'),
-                          span(")",
-                               style = 'font-family: "Brush Script MT"; color: gray; font-size: 28px')
+                               style = ' font-weight: bold; color: #4AA4DE; font-size: 28px')
                       ),
-                      #titleWidth = 501,
-                      titleWidth = 548,
+                      titleWidth = 501,
+                      # titleWidth = 548,
                       tags$li(a(href = 'https://github.com/sor16/bdrc',
                                 icon("github"),
                                 title = "Back to Apps Home"),
@@ -87,22 +97,86 @@ ui <- shinyUI(fluidPage(
                                                                id = "tabset1",width=NULL,
                                                                tabPanel(span('Figures',style='font-size: 16px;'),
                                                                         textOutput('debug'),
+                                                                        h4("Interactive rating curve -",
+                                                                            bsButton("ib1", label = "", icon = icon("info"),
+                                                                                     style = "primary" ,size="extra-small"),
+                                                                            bsPopover(id = "ib1", title = "",
+                                                                                      content = paste0('An interactive plot showing the fitted rating curve. The observations are shown as black dots, the estimated rating curve as a solid line and the dotted lines depict the 95% posterior predictive interval. To interact with the rating curve engage the "Advanced settings" option in the "Control" column.'),
+                                                                                      placement = "bottom", 
+                                                                                      trigger = "trigger", 
+                                                                                      options = list(container = "body")
+                                                                            )), 
                                                                         plotOutput('rc_fig',
                                                                                    click ='rc_fig_click',
                                                                                    dblclick = dblclickOpts(id = 'rc_fig_dblclick'),
                                                                                    hover = hoverOpts(id = "rc_hover",delay=100),
                                                                                    brush = brushOpts(id = 'rc_fig_brush',resetOnNew = TRUE)),
+                                                                        h4("Rating curve panel plot -",
+                                                                           bsButton("ib2", label = "", icon = icon("info"),
+                                                                                    style = "primary" ,size="extra-small"),
+                                                                           bsPopover(id = "ib2", title = "",
+                                                                                     content = paste0('A panel plot containing four figures that summarize the rating curve model resuts. Top-left: The estimated rating curve shown on a log-scale. Top-right: A residual plot showing the difference between the estimated rating curve and the observations, on a log scale. Bottom-right: The estimated standard deviation of the error terms shown as a function of water elevation. Bottom-left: The estimated power-law exponent shown as a function of water elevation. For more details, see the ', 
+                                                                                                      a("bdrc", 
+                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                      " web page."),
+                                                                                     placement = "bottom", 
+                                                                                     trigger = "trigger", 
+                                                                                     options = list(container = "body")
+                                                                           )), 
                                                                         uiOutput("rc_tooltip"),
                                                                         plotOutput('rc_panel')),
                                                                tabPanel(span('Tables',style='font-size: 16px;'),
-                                                                        h4(textOutput("tab1_head")), 
-                                                                        uiOutput('param_sum'),
-                                                                        h4(textOutput("tab2_head")),
+                                                                        h4(#textOutput("tab1_head"),
+                                                                           "Parameter summary table -",
+                                                                           bsButton("ib3", label = "", icon = icon("info"),
+                                                                                    style = "primary" ,size="extra-small"),
+                                                                           bsPopover(id = "ib3", title = "",
+                                                                                     content = paste0("A table showing summary statstics of the estimated model parameters. Shown are the 0.025, 0.500 and 0.975 quantiles of the posterior distributions of each parameter. For more details, see the ", 
+                                                                                                      a("bdrc", 
+                                                                                                        href = "https://sor16.github.io/bdrc/articles/background.html"),
+                                                                                                      " web page."),
+                                                                                     placement = "bottom", 
+                                                                                     trigger = "trigger", 
+                                                                                     options = list(container = "body")
+                                                                           )), 
+                                                                        uiOutput('param_sum_ui',height="auto"),
+                                                                        h4(#textOutput("tab2_head")
+                                                                            "Tabular rating curve -",
+                                                                            bsButton("ib4", label = "", icon = icon("info"),
+                                                                                     style = "primary" ,size="extra-small"),
+                                                                            bsPopover(id = "ib4", title = "",
+                                                                                      content = paste0("The fitted rating curve shown in tabular form. The column- and rownames show the water elevation in centimeter [cm] and decimeter [dm] increments, respectively. The table cells show the water discharge in cubic meters per second [m^3/s]."),
+                                                                                      placement = "bottom", 
+                                                                                      trigger = "trigger", 
+                                                                                      options = list(container = "body")
+                                                                            )), 
                                                                         plotOutput('rc_table')),
-                                                               tabPanel(span('Convergence diagnostics',style='font-size: 16px;'),
-                                                                        h4(textOutput("rhat_head")),
+                                                               tabPanel(span('Convergence diagnostics -',style='font-size: 16px;'),
+                                                                        h4("Gelman-Rubin statistic -",
+                                                                           bsButton("ib5", label = "", icon = icon("info"),
+                                                                                    style = "primary" ,size="extra-small"),
+                                                                           bsPopover(id = "ib5", title = "",
+                                                                                     content = paste0('A plot showing the Gelman-Rubin statistic for the posterior samples of the model parameters. This statistic can be used to assess the mixing and convergence of the Markov-Chain Monte-Carlo used to sample from the posterior distributions of the model parameters. If the statistic decreases below the value 1.1 as a the number of iterations increases then that is an inciation that the chains have mixed and converged adequately well. For more details, see the ', 
+                                                                                                      a("bdrc", 
+                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                      " web page."),
+                                                                                     placement = "bottom", 
+                                                                                     trigger = "trigger", 
+                                                                                     options = list(container = "body")
+                                                                           )), 
                                                                         plotOutput('conv_diag1'),
-                                                                        h4(textOutput("auto_head")),
+                                                                        h4("Autocorrelation in posterior draws -",
+                                                                           bsButton("ib6", label = "", icon = icon("info"),
+                                                                                    style = "primary" ,size="extra-small"),
+                                                                           bsPopover(id = "ib6", title = "",
+                                                                                     content = paste0('A plot showing the autocorrelation of the draws from the posterior distributions of the model parameters. The autocorrelation is a measure of how correlated the posterior draws are. For more details, see the ', 
+                                                                                                      a("bdrc", 
+                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                      " web page."),
+                                                                                     placement = "bottom", 
+                                                                                     trigger = "trigger", 
+                                                                                     options = list(container = "body")
+                                                                           )), 
                                                                         plotOutput('conv_diag2'))),
                                                            
                                                            tagList(
@@ -183,6 +257,7 @@ ui <- shinyUI(fluidPage(
 vals <- reactiveValues(keeprows=NULL)
 daterange <- reactiveValues(keeprows=NULL)
 above_hmax <- reactiveValues(logical=NULL)
+param_sum_height <- reactiveValues(height=100)
 ranges <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
@@ -227,17 +302,13 @@ server <- function(input, output, session) {
         input_h_max$W <- c(as.numeric(input$h_max))
         temp_exclude_point$W <- NULL
         temp_exclude_point$Q <- NULL
+        param_sum_height$height <- nrow(rc_model()$param_summary)
     })
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
         if(input$tournament){
             m <- 'tournament'
-            if( length(force$W)>0 ){
-                message_fun(title='Whoops!',text = 'Unfortunately our model selection algorithm does NOT support forcepoints for now. Your forcepoints will be removed for the model comparison but new forcepoints can be addded to the selected model.')
-                force$W=NULL
-                force$Q=NULL
-            }
         }else{
             m <- paste0(ifelse(input$checkbox2=='gen','gplm','plm'),
                         ifelse(input$checkbox3=='vary','','0'))
@@ -258,7 +329,7 @@ server <- function(input, output, session) {
         }
         rc_fun <- get(m)
         if(m=='tournament'){
-            rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat)
+            rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat, forcepoint=data()$observedData$Quality=='forcepoint')
             rc.fit <- rc.fit$winner
             rc_type <- if(grepl('g',class(rc.fit))) 'gen' else 'trad'
             var_type <- if(grepl('0',class(rc.fit))) 'const' else 'vary'
@@ -277,7 +348,7 @@ server <- function(input, output, session) {
         upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
         for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame(upd_pts[[i]] ) )
         
-        rc <- autoplot( rc_model(), title= 'Interactive rating curve' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
+        rc <- autoplot( rc_model(), title= '' ) + coord_cartesian( xlim = ranges$x, ylim = ranges$y )
         
         if( length(exclude_point$W)>0 | any(!daterange$keeprows) | any(above_hmax$logical) ){
             ex_dat <- data.frame( 'W'=c(exclude_point$W,data()$observedData_before$W[!daterange$keeprows | above_hmax$logical]), 
@@ -308,7 +379,7 @@ server <- function(input, output, session) {
         trans_rc <- autoplot( m, transformed=T, title= 'Log-transformed rating curve')   
         resid <- plot_resid( m )
         f_h <- autoplot( m, type='f', title= 'Power-law exponent')
-        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Error standard deviation')
+        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Std. dev. of error terms')
     
         
         if( length(dummy$W)>0 | length(force$W)>0 | length(exclude_point$W)>0 | any(!daterange$keeprows) ){
@@ -364,8 +435,7 @@ server <- function(input, output, session) {
     
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(input$rc_hover$coords_css)
-    #     print(input$rc_hover$coords_css)
+    #     print(rc_model()$param_summary)
     # })
     # # #############################
     
@@ -389,8 +459,8 @@ server <- function(input, output, session) {
         head_list <- list()
         head_list$tab1_head <- paste('Parameter summary table')
         head_list$tab2_head <- paste('Tabular rating curve')
-        head_list$rhat_head <- paste('Gelman-Rubin statistic plot')
-        head_list$auto_head <- paste('Autocorrelation plot')
+        head_list$rhat_head <- paste('Gelman-Rubin statistic')
+        head_list$auto_head <- paste('Autocorrelation in posterior draws')
         return(head_list)
     })
     output$tab1_head <- renderText({
@@ -417,45 +487,45 @@ server <- function(input, output, session) {
     },height=500,width=550)
     
     #### TAB 2 - Tables
-    output$param_sum <- renderUI({
+    # output$param_sum <- renderUI({
+    output$param_sum <- renderPlot({
         m <- rc_model()
         param <- get_param_names(class(m),m$run_info$c_param)
         table <- m$param_summary[,c('lower','median','upper')]
-        names(table) <- paste0(names(table),c('-2.5\\%','-50\\%','-97.5\\%'))
-        row.names(table) <- sapply(1:length(param),get_param_expression)
+        names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+        row.names(table) <- sapply(param,function(x) paste0("italic(",shiny_get_param_expression(x,latex=FALSE),")") )
         table <- format(round(table,digits=3),nsmall=3)
-        table <- print(xtable::xtable(as.data.frame(table)),
-                       floating=FALSE, 
-                       tabular.environment="array",
-                       include.rownames = TRUE,
-                       comment=FALSE, 
-                       print.results=FALSE, 
-                       sanitize.rownames.function = function(x) x,
-                       sanitize.colnames.function = function(x) x)
-        tagList(
-            withMathJax(),
-            HTML(paste0("$$", table, "$$"))
-        )
+        tg <- list(tableGrob(table,
+                             theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
+                                                  colhead=list(fg_params=list(col="black",fontface=2L)),
+                                                  rowhead=list(fg_params=list(col="black",fontface=2L,parse=TRUE)))))
+        tgt <- lapply(tg, justify, vjust="top", hjust="left")
+        grid.arrange(grobs=tgt, ncol=1)
+    })
+    
+    output$param_sum_ui <- renderUI({
+        plotOutput('param_sum',height=param_sum_height$height*27-0.25*param_sum_height$height^2) 
     })
     
     
     
     output$rc_table <- renderPlot({
         tg <- list(tableGrob(format(round(predict( rc_model() ,wide=T),digits=3),nsmall=3),
-                             theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
+                             theme=ttheme_minimal(core=list(bg_params=list(fill = c("#F7FBFF","#DEEBF7"), col=NA),
+                                                            fg_params=list(fontface=3)),
                                                   colhead=list(fg_params=list(col="black",fontface=2L)),
                                                   rowhead=list(fg_params=list(col="black",fontface=2L)))))
-        tgt <- lapply(tg, justify, vjust="top")
+        tgt <- lapply(tg, justify, vjust="top", hjust="left")
         grid.arrange(grobs=tgt, ncol=1)
     })
     
     
     #### TAB 3 - Convergence diagnostics
     output$conv_diag1 <- renderPlot({
-        autoplot(rc_model(), type='r_hat') 
+        autoplot(rc_model(), type='r_hat', title='') 
     },height = 400,width = 550)
     output$conv_diag2 <- renderPlot({
-        autoplot(rc_model(), type='autocorrelation')
+        autoplot(rc_model(), type='autocorrelation', title='')
     },height = 400,width = 550)
     
     
@@ -465,13 +535,13 @@ server <- function(input, output, session) {
         content <- function(file) {
             filename <- 'bdrc_report.pdf'
             m <- rc_model()
-            report_pages <- bdrc::get_report_pages(m)
+            report_pages <- get_report_pages(m)
             panel_plot <- arrangeGrob(create_rc_fig(),create_rc_panel()$resid,
                                       create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
             param <- get_param_names(class(m),m$run_info$c_param)
             table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
             names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
-            row.names(table) <- c(sapply(1:length(param),function(x) get_param_expression(x,latex=FALSE)),"Deviance")
+            row.names(table) <- c(sapply(param,function(x) shiny_get_param_expression(x,latex=FALSE)),"Deviance")
             table <- format(round(table,digits=3),nsmall=3)
             table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
             page1_revised <- arrangeGrob(panel_plot,

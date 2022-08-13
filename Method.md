@@ -3,15 +3,7 @@ output:
     html_document
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = FALSE,
-  comment = "#>",
-  fig.path='figs-introduction/',
-  fig.align='center',
-  prompt=T
-)
-```
+
 
 ## Software <img src="www/logo.png" align="right" alt="" width="140" />
 

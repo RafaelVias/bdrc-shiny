@@ -1,0 +1,11 @@
+name: bdrc_shiny
+title:
+username:
+account: raffidv
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5398403
+bundleId: 5496464
+url: https://raffidv.shinyapps.io/bdrc_shiny/
+when: 1642855768.14374
+lastSyncTime: 1642855768.14376

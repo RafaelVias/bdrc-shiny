@@ -17,7 +17,7 @@ get_param_names <- function(model,c_param){
 }
 
 
-get_param_expression <- function(param,latex=TRUE){
+shiny_get_param_expression <- function(param,latex=TRUE){
     if(latex){
         expr_vec <- c('a'='a','b'='b','c'='c','sigma_eps'='\\sigma_{\\epsilon}',
                       'sigma_beta'='\\sigma_{\\beta}','phi_beta'='\\phi_{\\beta}',
@@ -181,7 +181,7 @@ plot_resid <- function(m){
         ylab(parse(text=y_lab)) +
         scale_x_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.01,2))) +
         scale_y_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.05,2))) +
-        ggtitle('Residual plot') +
+        ggtitle('Residuals') +
         theme_bdrc()
     return(p)
 }
