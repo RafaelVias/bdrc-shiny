@@ -2,6 +2,7 @@ library(shinydashboard)
 library(shinyBS)
 library(shinyWidgets)
 # library(bdrc)
+library(markdown)
 library(ggplot2)
 library(readxl)
 library(grid)
@@ -225,7 +226,7 @@ ui <- shinyUI(fluidPage(
                                                                                     ),
                                                                                     actionButton('reset',
                                                                                                  label='Reset',
-                                                                                                 icon('refresh',style="color: dodgerblue")),
+                                                                                                 icon('arrows-rotate',style="color: dodgerblue")),
                                                                                     ),
                                                                    width=12),
                                                                br(),br(),
@@ -444,9 +445,9 @@ server <- function(input, output, session) {
         if(input$tournament){
             shinyjs::disable("checkbox2")
             shinyjs::disable("checkbox3")
-            message_fun(title="Heads up!",text="We will find the appropriate rating curve model for your data using model comparison of all available model types. 
-                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal rating curve 
-                     type and residual variance will be indicated on the right after running.")
+            message_fun(title="Heads up!",text='We will find the appropriate rating curve model for your data by comparing all available model types. 
+                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal setting for the "Rating curve 
+                     type" and the "Error variance" will be indicated in the "Controls" panel on the right after running.')
         }else{
             shinyjs::enable("checkbox2")
             shinyjs::enable("checkbox3")
