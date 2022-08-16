@@ -182,7 +182,8 @@ plot_resid <- function(m){
         scale_x_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.01,2))) +
         scale_y_continuous(limits= c(NA,NA),expand=expansion(mult=rep(.05,2))) +
         ggtitle('Residuals') +
-        theme_bdrc()
+        theme_bdrc() +
+        theme(plot.title = element_text( vjust = 2 ))
     return(p)
 }
 

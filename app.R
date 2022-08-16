@@ -2,8 +2,8 @@ library(shinydashboard)
 library(shinyBS)
 library(shinyWidgets)
 # library(bdrc)
-library(markdown)
 library(ggplot2)
+library(devtools)
 library(readxl)
 library(grid)
 library(gridExtra)
@@ -13,17 +13,19 @@ library(knitr)
 library(writexl)
 library(parallel)
 
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/data.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/extract_draws.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm0.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/help_functions.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm_methods.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm0.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/report.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament_methods.R")
-source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament.R")
+devtools::install_github("sor16/bdrc")
+
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/data.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/extract_draws.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm0.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/help_functions.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm_methods.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm0.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/report.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament_methods.R")
+# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament.R")
 
 source('shiny_help_functions.R')
 
@@ -377,11 +379,24 @@ server <- function(input, output, session) {
         d <- data()
         c <- ifelse(is.null(m$run_info$c_param),m$param_summary['c','median'],m$run_info$c_param)
         
-        trans_rc <- autoplot( m, transformed=T, title= 'Log-transformed rating curve')   
-        resid <- plot_resid( m )
-        f_h <- autoplot( m, type='f', title= 'Power-law exponent')
-        sigma_eps <- autoplot( m, type='sigma_eps', title= 'Std. dev. of error terms')
-    
+        grob_list <- list(ggplotGrob(autoplot( m, transformed=T)),
+                          ggplotGrob(plot_resid( m )),
+                          ggplotGrob(autoplot( m, type='f')),
+                          ggplotGrob(autoplot( m, type='sigma_eps')))
+        
+        maxHeight <-  unit.pmax( grob_list[[1]]$heights[2:9], grob_list[[2]]$heights[2:9],
+                                 grob_list[[3]]$heights[2:9], grob_list[[4]]$heights[2:9])
+        maxWidth <-  unit.pmax( grob_list[[1]]$widths[2:5], grob_list[[2]]$widths[2:5],
+                                grob_list[[3]]$widths[2:5], grob_list[[4]]$widths[2:5])
+        for(j in 1:4){
+            grob_list[[j]]$heights[2:9] <- as.list(maxHeight)
+            grob_list[[j]]$widths[2:5] <- as.list(maxWidth)
+        }
+        
+        trans_rc <- arrangeGrob(grob_list[[1]])
+        resid <- arrangeGrob(grob_list[[2]])   
+        f_h <- arrangeGrob(grob_list[[3]])   
+        sigma_eps <- arrangeGrob(grob_list[[4]])
         
         if( length(dummy$W)>0 | length(force$W)>0 | length(exclude_point$W)>0 | any(!daterange$keeprows) ){
             int_h_min <- min(dummy$W,force$W,exclude_point$W,d$observedData_before$W[!daterange$keeprows])
@@ -561,9 +576,7 @@ server <- function(input, output, session) {
     
     ### Download xlsx ###
     output$xlsxexport <- downloadHandler(
-        filename= function(){
-            paste0('bdrc_tables.xlsx')
-        },    
+        filename= 'bdrc_tables.xlsx',    
         content = function(file){
             m <- rc_model()
             tablelist=list()
@@ -571,7 +584,7 @@ server <- function(input, output, session) {
             tablelist$Rating_Curve_Predictive <- m$rating_curve
             tablelist$Parameter_summary <- data.frame('parameters'=rownames(m$param_summary),m$param_summary)
             tablelist$Data_and_Added_Points <- m$data
-            write_xlsx(tablelist, path=file)
+            writexl::write_xlsx(tablelist, path=file)
         }
     )
     
