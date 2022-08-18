@@ -15,18 +15,6 @@ library(parallel)
 
 devtools::install_github("sor16/bdrc")
 
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/data.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/extract_draws.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/gplm0.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/help_functions.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm_methods.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/plm0.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/report.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament_methods.R")
-# source("/Users/Vias/Desktop/R/HI/Bayes_Sumar/bdrc/R/tournament.R")
-
 source('shiny_help_functions.R')
 
 js <- '.nav-tabs-custom .nav-tabs li.active {
@@ -49,29 +37,78 @@ m_item <- ".sidebar-menu li a { font-size: 15px; }"
 rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
 sapply(rmdfiles, knit, quiet = T)
 
+
+downloadTableUI <- function(id) {
+    ns <- NS(id)
+    downloadButton(ns("table_download"), label = "Download excel tables")
+}
+
+downloadReportUI <- function(id) {
+    ns <- NS(id)
+    downloadButton(ns("report_download"), label = "Download report")
+}
+
+
+downloadTable <- function(input, output, session, data) {
+    
+    output$table_download <- downloadHandler(
+        filename = function() {
+            paste("bdrc_tables_", Sys.Date(), ".xlsx", sep="")
+        },
+        content = function(file) {
+            writexl::write_xlsx(data(), path=file)
+        }
+    )
+    
+}
+
+downloadReport <- function(input, output, session, page_one, remaining_pages ) {
+    
+    output$report_download <- downloadHandler(
+        filename = function() {
+            paste("bdrc_report_", Sys.Date(), ".pdf", sep="")
+        },
+        content = function(file) {
+            pdf(file=file,paper='a4',width=9,height=11)
+            grid.arrange(page_one(),as.table=TRUE)
+            for(i in 2:length(remaining_pages()) ) grid.arrange(remaining_pages()[[i]],as.table=TRUE)
+            invisible(dev.off())
+            # file.copy("bdrc_report.pdf", file)
+        }
+    )
+    
+}
+
+
 ui <- shinyUI(fluidPage(
         title='Bayesian Discharge Rating Curves - bdrc',
         shinyjs::useShinyjs(),
         withMathJax(),
         dashboardPage(skin = 'black',
-                      dashboardHeader(title = span(
-                          span("Bayesian",
-                               style = 'font-weight: bold; color: #1F65CC; font-size: 28px'),
-                          span("|",
-                               style = 'font-family: "Times"; color: gray; font-size: 28px'),
-                          span("Discharge Rating Curves",
-                               style = ' font-weight: bold; color: #4AA4DE; font-size: 28px')
+                      dashboardHeader(
+                          tags$li(class = "dropdown",
+                                  tags$style(".main-header {max-height: 200px}"),
+                                  tags$style(".main-header .logo {height: 55px}")
+                          ),
+                          title = span(
+                              span("Bayesian",
+                                   style = 'font-weight: bold; color: #1F65CC; font-size: 30px'),
+                              span("|",
+                                   style = 'font-family: "Times"; color: gray; font-size: 30px'),
+                              span("Discharge Rating Curves",
+                                   style = ' font-weight: bold; color: #4AA4DE; font-size: 30px')
                       ),
-                      titleWidth = 501,
-                      # titleWidth = 548,
-                      tags$li(a(href = 'https://github.com/sor16/bdrc',
-                                icon("github"),
+                      titleWidth = 550,
+                      tags$li(a(href = 'https://github.com/RafaelVias/bdrc-shiny',
+                                tags$img(src = 'github_icon.svg',
+                                         title = "The bdrc Shiny app github page", 
+                                         height = "27.5px"),
                                 title = "Back to Apps Home"),
                               class = "dropdown"),
                       tags$li(a(href = 'https://sor16.github.io/bdrc/index.html',
                                 tags$img(src = 'logo.png',
-                                         title = "Company Home", 
-                                         height = "30px"),
+                                         title = "The bdrc package github page", 
+                                         height = "35px"),
                                 style = "padding-top:10px; padding-bottom:10px;"),
                               class = "dropdown")),
                       dashboardSidebar(
@@ -120,7 +157,7 @@ ui <- shinyUI(fluidPage(
                                                                            bsPopover(id = "ib2", title = "",
                                                                                      content = paste0('A panel plot containing four figures that summarize the rating curve model resuts. Top-left: The estimated rating curve shown on a log-scale. Top-right: A residual plot showing the difference between the estimated rating curve and the observations, on a log scale. Bottom-right: The estimated standard deviation of the error terms shown as a function of water elevation. Bottom-left: The estimated power-law exponent shown as a function of water elevation. For more details, see the ', 
                                                                                                       a("bdrc", 
-                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                        href = "https://sor16.github.io/bdrc/articles/introduction.html"),
                                                                                                       " web page."),
                                                                                      placement = "bottom", 
                                                                                      trigger = "trigger", 
@@ -129,22 +166,20 @@ ui <- shinyUI(fluidPage(
                                                                         uiOutput("rc_tooltip"),
                                                                         plotOutput('rc_panel')),
                                                                tabPanel(span('Tables',style='font-size: 16px;'),
-                                                                        h4(#textOutput("tab1_head"),
-                                                                           "Parameter summary table -",
+                                                                        h4("Parameter summary table -",
                                                                            bsButton("ib3", label = "", icon = icon("info"),
                                                                                     style = "primary" ,size="extra-small"),
                                                                            bsPopover(id = "ib3", title = "",
                                                                                      content = paste0("A table showing summary statstics of the estimated model parameters. Shown are the 0.025, 0.500 and 0.975 quantiles of the posterior distributions of each parameter. For more details, see the ", 
                                                                                                       a("bdrc", 
-                                                                                                        href = "https://sor16.github.io/bdrc/articles/background.html"),
+                                                                                                        href = "https://sor16.github.io/bdrc/articles/introduction.html"),
                                                                                                       " web page."),
                                                                                      placement = "bottom", 
                                                                                      trigger = "trigger", 
                                                                                      options = list(container = "body")
                                                                            )), 
                                                                         uiOutput('param_sum_ui',height="auto"),
-                                                                        h4(#textOutput("tab2_head")
-                                                                            "Tabular rating curve -",
+                                                                        h4("Tabular rating curve -",
                                                                             bsButton("ib4", label = "", icon = icon("info"),
                                                                                      style = "primary" ,size="extra-small"),
                                                                             bsPopover(id = "ib4", title = "",
@@ -161,7 +196,7 @@ ui <- shinyUI(fluidPage(
                                                                            bsPopover(id = "ib5", title = "",
                                                                                      content = paste0('A plot showing the Gelman-Rubin statistic for the posterior samples of the model parameters. This statistic can be used to assess the mixing and convergence of the Markov-Chain Monte-Carlo used to sample from the posterior distributions of the model parameters. If the statistic decreases below the value 1.1 as a the number of iterations increases then that is an inciation that the chains have mixed and converged adequately well. For more details, see the ', 
                                                                                                       a("bdrc", 
-                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                        href = "https://sor16.github.io/bdrc/articles/introduction.html"),
                                                                                                       " web page."),
                                                                                      placement = "bottom", 
                                                                                      trigger = "trigger", 
@@ -174,7 +209,7 @@ ui <- shinyUI(fluidPage(
                                                                            bsPopover(id = "ib6", title = "",
                                                                                      content = paste0('A plot showing the autocorrelation of the draws from the posterior distributions of the model parameters. The autocorrelation is a measure of how correlated the posterior draws are. For more details, see the ', 
                                                                                                       a("bdrc", 
-                                                                                                        href = "https://sor16.github.io/bdrc/index.html"),
+                                                                                                        href = "https://sor16.github.io/bdrc/articles/introduction.html"),
                                                                                                       " web page."),
                                                                                      placement = "bottom", 
                                                                                      trigger = "trigger", 
@@ -198,7 +233,7 @@ ui <- shinyUI(fluidPage(
                                                     column(width=4,
                                                            box(status="primary", width = NULL,
                                                                title = "Controls",
-                                                               tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file'),
+                                                               tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file', style = "border-style: solid; border-color: #D2D2D2;"),
                                                                    br(),
                                                                    br(),
                                                                    fileInput('file', 'Upload excel file',
@@ -232,9 +267,9 @@ ui <- shinyUI(fluidPage(
                                                                                     ),
                                                                    width=12),
                                                                br(),br(),
-                                                               tags$a(href = 'downloadReport', class = "btn", icon("download"), 'Download report'),
-                                                               br(),
-                                                               tags$a(href = 'xlsxexport', class = "btn", icon("download"), 'Download tables as xlsx'),
+                                                               downloadReportUI(id = 'downloadReport'),
+                                                               br(),br(),
+                                                               downloadTableUI(id = "xlsxexport"),
                                                            )
                                                     )
                                                 )
@@ -254,6 +289,8 @@ ui <- shinyUI(fluidPage(
         )
     )
 )
+
+
 
 ################## SERVER ##################################################
 
@@ -524,7 +561,6 @@ server <- function(input, output, session) {
     })
     
     
-    
     output$rc_table <- renderPlot({
         tg <- list(tableGrob(format(round(predict( rc_model() ,wide=T),digits=3),nsmall=3),
                              theme=ttheme_minimal(core=list(bg_params=list(fill = c("#F7FBFF","#DEEBF7"), col=NA),
@@ -546,47 +582,59 @@ server <- function(input, output, session) {
     
     
     ### Download Report ###
-    output$downloadReport <- downloadHandler(
-        filename <- 'bdrc_report.pdf',
-        content <- function(file) {
-            filename <- 'bdrc_report.pdf'
-            m <- rc_model()
-            report_pages <- get_report_pages(m)
-            panel_plot <- arrangeGrob(create_rc_fig(),create_rc_panel()$resid,
-                                      create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
-            param <- get_param_names(class(m),m$run_info$c_param)
-            table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
-            names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
-            row.names(table) <- c(sapply(param,function(x) shiny_get_param_expression(x,latex=FALSE)),"Deviance")
-            table <- format(round(table,digits=3),nsmall=3)
-            table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
-            page1_revised <- arrangeGrob(panel_plot,
-                                         table_grob,
-                                         nrow=2,
-                                         as.table=TRUE,
-                                         heights=c(5,3),
-                                         top=textGrob(class(m),gp=gpar(fontsize=22,facetype='bold')))
-            pdf(file=filename,paper='a4',width=9,height=11)
-            grid.arrange(page1_revised,as.table=TRUE)
-            for(i in 2:length(report_pages) ) grid.arrange(report_pages[[i]],as.table=TRUE)
-            invisible(dev.off())
-            file.copy("bdrc_report.pdf", file)
-        }
-    )
+    # output$downloadReport <- downloadHandler(
+    #     filename <- function(){'bdrc_report.pdf'},
+    #     content <- function(file) {
+    #         pdf(file=file,paper='a4',width=9,height=11)
+    #         grid.arrange(page1_revised,as.table=TRUE)
+    #         for(i in 2:length(report_pages) ) grid.arrange(report_pages[[i]],as.table=TRUE)
+    #         invisible(dev.off())
+    #         file.copy("bdrc_report.pdf", file)
+    #     }
+    # )
     
-    ### Download xlsx ###
-    output$xlsxexport <- downloadHandler(
-        filename= 'bdrc_tables.xlsx',    
-        content = function(file){
-            m <- rc_model()
-            tablelist=list()
-            tablelist$Rating_Curve_Mean <- m$rating_curve_mean
-            tablelist$Rating_Curve_Predictive <- m$rating_curve
-            tablelist$Parameter_summary <- data.frame('parameters'=rownames(m$param_summary),m$param_summary)
-            tablelist$Data_and_Added_Points <- m$data
-            writexl::write_xlsx(tablelist, path=file)
-        }
-    )
+    my_report_1 <- reactive({
+        m <- rc_model()
+        report_pages <- get_report_pages(m)
+        rating_curve_plot <- create_rc_fig() + ggtitle('Rating curve')
+        panel_plot <- arrangeGrob(rating_curve_plot,create_rc_panel()$resid,
+                                  create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
+        param <- get_param_names(class(m),m$run_info$c_param)
+        table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
+        names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+        row.names(table) <- c(sapply(param,function(x) shiny_get_param_expression(x,latex=FALSE)),"Deviance")
+        table <- format(round(table,digits=3),nsmall=3)
+        table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
+        refined_first_page <- arrangeGrob(panel_plot,
+                                          table_grob,
+                                          nrow=2,
+                                          as.table=TRUE,
+                                          heights=c(5,3),
+                                          top=textGrob(paste0('Model type: ',class(m)),gp=gpar(fontsize=18,facetype='bold')))
+        refined_first_page
+    })
+    
+    my_report_2 <- reactive({
+        m <- rc_model()
+        report_pages <- get_report_pages(m)
+        report_pages
+    })
+    
+    callModule(downloadReport, id = "downloadReport", page_one = my_report_1,  remaining_pages = my_report_2)
+    
+    
+    my_table <- reactive({
+        m <- rc_model()
+        tablelist=list()
+        tablelist$Rating_Curve_Mean <- m$rating_curve_mean
+        tablelist$Rating_Curve_Predictive <- m$rating_curve
+        tablelist$Parameter_summary <- data.frame('parameters'=rownames(m$param_summary),m$param_summary)
+        tablelist$Data_and_Added_Points <- m$data
+        tablelist
+    })
+    
+    callModule(downloadTable, id = "xlsxexport", data = my_table)
+
     
     #######Interactivity#######
     
@@ -673,4 +721,5 @@ server <- function(input, output, session) {
 
     
 }
+
 shinyApp(ui, server)

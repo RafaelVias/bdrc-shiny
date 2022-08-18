@@ -133,7 +133,7 @@ clean <- function(file,advanced=TRUE,includedates=c(1950,as.numeric(format(Sys.D
     return(list("wq"=wq,"observedData"=observedData,"observedData_before"=observedData_before))
 }
 
-get_residuals_dat <- function(m){
+shiny_get_residuals_dat <- function(m){
     h_min <- min(m$data[[all.vars(m$formula)[2]]])
     rc_dat <- merge(m$rating_curve_mean[,c('h','median','lower','upper')],m$rating_curve[,c('h','median','lower','upper')],by.x='h',by.y='h')
     resid_dat <- merge(rc_dat[rc_dat$h>=h_min,],m$data,by.x='h',by.y=all.vars(m$formula)[2],all.x=TRUE)
@@ -166,7 +166,7 @@ theme_bdrc <- function(...,scaling=1){
 }
 
 plot_resid <- function(m){
-    resid_dat <- get_residuals_dat(m)
+    resid_dat <- shiny_get_residuals_dat(m)
     y_lab <- "paste('','log','(','',italic(paste('Q')),')','','-log','(','',italic(paste('',hat(paste('Q')))),')','','')"
     x_lab <- "paste('','log','(','',italic(paste('h',phantom() - phantom(),'',hat(paste('c')))),')','','')"
     method <- 'loess'
