@@ -1,5 +1,6 @@
 library(shinydashboard)
 library(shinyBS)
+library(shinyjs)
 library(shinyWidgets)
 # library(bdrc)
 library(ggplot2)
@@ -12,9 +13,10 @@ library(shiny)
 library(knitr)
 library(writexl)
 library(parallel)
+library(markdown)
 
-devtools::install_github("sor16/bdrc")
-
+# devtools::install_github("sor16/bdrc",force=T)
+devtools::load_all("bdrc")
 source('shiny_help_functions.R')
 
 js <- '.nav-tabs-custom .nav-tabs li.active {
@@ -56,7 +58,7 @@ downloadTable <- function(input, output, session, data) {
             paste("bdrc_tables_", Sys.Date(), ".xlsx", sep="")
         },
         content = function(file) {
-            writexl::write_xlsx(data(), path=file)
+            write_xlsx(data(), path=file)
         }
     )
     
@@ -73,22 +75,21 @@ downloadReport <- function(input, output, session, page_one, remaining_pages ) {
             grid.arrange(page_one(),as.table=TRUE)
             for(i in 2:length(remaining_pages()) ) grid.arrange(remaining_pages()[[i]],as.table=TRUE)
             invisible(dev.off())
-            # file.copy("bdrc_report.pdf", file)
         }
     )
     
 }
 
-
 ui <- shinyUI(fluidPage(
+        tags$head(tags$link(rel="shortcut icon", href="logo_nbg.png")),
         title='Bayesian Discharge Rating Curves - bdrc',
-        shinyjs::useShinyjs(),
+        useShinyjs(),
         withMathJax(),
         dashboardPage(skin = 'black',
                       dashboardHeader(
                           tags$li(class = "dropdown",
                                   tags$style(".main-header {max-height: 200px}"),
-                                  tags$style(".main-header .logo {height: 55px}")
+                                  tags$style(".main-header .logo {height: 54px}")
                           ),
                           title = span(
                               span("Bayesian",
@@ -102,19 +103,19 @@ ui <- shinyUI(fluidPage(
                       tags$li(a(href = 'https://github.com/RafaelVias/bdrc-shiny',
                                 tags$img(src = 'github_icon.svg',
                                          title = "The bdrc Shiny app github page", 
-                                         height = "27.5px"),
+                                         height = "24px"),
                                 title = "Back to Apps Home"),
                               class = "dropdown"),
                       tags$li(a(href = 'https://sor16.github.io/bdrc/index.html',
                                 tags$img(src = 'logo.png',
-                                         title = "The bdrc package github page", 
-                                         height = "35px"),
+                                         title = "The bdrc package web page", 
+                                         height = "34px"),
                                 style = "padding-top:10px; padding-bottom:10px;"),
                               class = "dropdown")),
                       dashboardSidebar(
                           sidebarMenu(
-                              menuItem("Rating curve builder", tabName = "app", icon = icon("water")),
-                              menuItem("How to use the app?", tabName = "instructions", icon = icon("life-ring")),
+                              menuItem("Rating curve app", tabName = "app", icon = icon("water")),
+                              menuItem("Instructions", tabName = "instructions", icon = icon("life-ring")),
                               menuItem("Background", tabName = "about", icon = icon("book")),
                               menuItem("Report a bug", tabName = "bugs", icon = icon("bug"))
                           )
@@ -141,7 +142,7 @@ ui <- shinyUI(fluidPage(
                                                                             bsButton("ib1", label = "", icon = icon("info"),
                                                                                      style = "primary" ,size="extra-small"),
                                                                             bsPopover(id = "ib1", title = "",
-                                                                                      content = paste0('An interactive plot showing the fitted rating curve. The observations are shown as black dots, the estimated rating curve as a solid line and the dotted lines depict the 95% posterior predictive interval. To interact with the rating curve engage the "Advanced settings" option in the "Control" column.'),
+                                                                                      content = paste0('An interactive plot showing the fitted rating curve. The observations are shown as black dots, the estimated rating curve as a solid line and the dotted lines depict the 95% posterior predictive interval. To interact with the rating curve engage the "Advanced settings" option in the "Controls" column.'),
                                                                                       placement = "bottom", 
                                                                                       trigger = "trigger", 
                                                                                       options = list(container = "body")
@@ -188,8 +189,10 @@ ui <- shinyUI(fluidPage(
                                                                                       trigger = "trigger", 
                                                                                       options = list(container = "body")
                                                                             )), 
-                                                                        plotOutput('rc_table')),
-                                                               tabPanel(span('Convergence diagnostics -',style='font-size: 16px;'),
+                                                                        #plotOutput('rc_table')
+                                                                        uiOutput('rc_table_ui',height="auto")
+                                                                        ),
+                                                               tabPanel(span('Convergence diagnostics',style='font-size: 16px;'),
                                                                         h4("Gelman-Rubin statistic -",
                                                                            bsButton("ib5", label = "", icon = icon("info"),
                                                                                     style = "primary" ,size="extra-small"),
@@ -231,12 +234,15 @@ ui <- shinyUI(fluidPage(
                                                            
                                                     ),
                                                     column(width=4,
-                                                           box(status="primary", width = NULL,
+                                                           actionButton(inputId = "hide_controls", label = "Hide Controls",icon('eye-slash') ),
+                                                           br(),br(),
+                                                           box(id = "controls",
+                                                               status="primary", width = NULL,
                                                                title = "Controls",
-                                                               tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download xlsx test file', style = "border-style: solid; border-color: #D2D2D2;"),
+                                                               tags$a(href = 'exceldata.xlsx', class = "btn", icon("download"), 'Download .xlsx test file', style = "border-style: solid; border-color: #D2D2D2;"),
                                                                    br(),
                                                                    br(),
-                                                                   fileInput('file', 'Upload excel file',
+                                                                   fileInput('file', 'Upload excel file (.xlsx)',
                                                                              accept=c('application/vnd.ms-excel',
                                                                                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                                                                       '.xls',
@@ -245,7 +251,7 @@ ui <- shinyUI(fluidPage(
                                                                             label="Create rating curve",
                                                                             icon("play",style="color: dodgerblue")),
                                                                br(),br(),br(),
-                                                               box(radioButtons(inputId="checkbox2", label="Rating curve type",choices=list("Generalized power-law"='gen',"Power-law"='trad'),selected="gen"),
+                                                               box(radioButtons(inputId="checkbox2", label="Rating curve type",choices=list("Generalized power law"='gen',"Power law"='trad'),selected="gen"),
                                                                    radioButtons(inputId="checkbox3", label="Error variance",choices=list("Varying with water elevation" = 'vary',"Constant" = 'const'),selected='vary'),
                                                                    checkboxInput("tournament", label=span('Calculate best rating curve',style='font-weight: bold;'), value=FALSE),
                                                                    width = 12),
@@ -262,12 +268,10 @@ ui <- shinyUI(fluidPage(
                                                                                     textInput("c_parameter",label="Water elevation of zero discharge (m)"
                                                                                     ),
                                                                                     actionButton('reset',
-                                                                                                 label='Reset',
-                                                                                                 icon('arrows-rotate',style="color: dodgerblue")),
+                                                                                                 label='Remove changes',
+                                                                                                 icon('eraser',style="color: dodgerblue")),
                                                                                     ),
                                                                    width=12),
-                                                               br(),br(),
-                                                               downloadReportUI(id = 'downloadReport'),
                                                                br(),br(),
                                                                downloadTableUI(id = "xlsxexport"),
                                                            )
@@ -298,6 +302,7 @@ vals <- reactiveValues(keeprows=NULL)
 daterange <- reactiveValues(keeprows=NULL)
 above_hmax <- reactiveValues(logical=NULL)
 param_sum_height <- reactiveValues(height=100)
+tabular_rating_curve_height <- reactiveValues(height=100)
 ranges <- reactiveValues(x = NULL, y = NULL)
 dummy <- reactiveValues(Q=NULL,W=NULL)
 force <- reactiveValues(Q=NULL,W=NULL)
@@ -306,6 +311,11 @@ temp_exclude_point <- reactiveValues(Q=NULL,W=NULL)
 input_h_max <- reactiveValues(W=NA)
 
 server <- function(input, output, session) {
+    
+    # hide controls
+    observeEvent(input$hide_controls, {
+        shinyjs::toggle("controls")
+    })
     
     ## data import ##
     data <- eventReactive(input$go,{
@@ -343,6 +353,7 @@ server <- function(input, output, session) {
         temp_exclude_point$W <- NULL
         temp_exclude_point$Q <- NULL
         param_sum_height$height <- nrow(rc_model()$param_summary)
+        tabular_rating_curve_height$height <- max(ceiling(max(rc_model()$rating_curve$h)*10),input_h_max$W,na.rm=T) - floor(min(rc_model()$rating_curve$h)*10)
     })
     
     ## run Models ##
@@ -409,31 +420,20 @@ server <- function(input, output, session) {
     
     ### create panel plot figures ###
     create_rc_panel <- reactive({
+        
         upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point) )
         for (i in c('dummy','force','exclude_point')) assign( i, as.data.frame( upd_pts[[i]] ) )
         
         m <- rc_model()
         d <- data()
         c <- ifelse(is.null(m$run_info$c_param),m$param_summary['c','median'],m$run_info$c_param)
+
         
-        grob_list <- list(ggplotGrob(autoplot( m, transformed=T)),
-                          ggplotGrob(plot_resid( m )),
-                          ggplotGrob(autoplot( m, type='f')),
-                          ggplotGrob(autoplot( m, type='sigma_eps')))
+        trans_rc <- autoplot( m, transformed=T) + theme(plot.title = element_text(size=15) )
+        resid <- plot_resid( m )  
+        f_h <- autoplot( m, type='f')  + theme(plot.title = element_text(size=15) )
+        sigma_eps <- autoplot( m, type='sigma_eps')  + theme(plot.title = element_text(size=15) )
         
-        maxHeight <-  unit.pmax( grob_list[[1]]$heights[2:9], grob_list[[2]]$heights[2:9],
-                                 grob_list[[3]]$heights[2:9], grob_list[[4]]$heights[2:9])
-        maxWidth <-  unit.pmax( grob_list[[1]]$widths[2:5], grob_list[[2]]$widths[2:5],
-                                grob_list[[3]]$widths[2:5], grob_list[[4]]$widths[2:5])
-        for(j in 1:4){
-            grob_list[[j]]$heights[2:9] <- as.list(maxHeight)
-            grob_list[[j]]$widths[2:5] <- as.list(maxWidth)
-        }
-        
-        trans_rc <- arrangeGrob(grob_list[[1]])
-        resid <- arrangeGrob(grob_list[[2]])   
-        f_h <- arrangeGrob(grob_list[[3]])   
-        sigma_eps <- arrangeGrob(grob_list[[4]])
         
         if( length(dummy$W)>0 | length(force$W)>0 | length(exclude_point$W)>0 | any(!daterange$keeprows) ){
             int_h_min <- min(dummy$W,force$W,exclude_point$W,d$observedData_before$W[!daterange$keeprows])
@@ -486,23 +486,27 @@ server <- function(input, output, session) {
         return(list('trans_rc'=trans_rc,'resid'=resid,'f_h'=f_h,'sigma_eps'=sigma_eps))
     })
     
+    
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(rc_model()$param_summary)
+    #     print(input_h_max$W)
+    #     print(tabular_rating_curve_height$height)
     # })
     # # #############################
+    
     
     ### Tournament ###
     observeEvent(input$tournament, {
         if(input$tournament){
-            shinyjs::disable("checkbox2")
-            shinyjs::disable("checkbox3")
-            message_fun(title="Heads up!",text='We will find the appropriate rating curve model for your data by comparing all available model types. 
-                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal setting for the "Rating curve 
-                     type" and the "Error variance" will be indicated in the "Controls" panel on the right after running.')
+            disable("checkbox2")
+            disable("checkbox3")
+            message_fun(title="Heads up!",text=span(span('We will find the appropriate rating curve model for your data by comparing all available model types. 
+                     This is a great feature of our software, but might take a couple of minutes to complete. The optimal setting for the '),span('Rating curve 
+                     type',style = 'font-weight: bold;'),span(' and the'),span('Error variance',style = 'font-weight: bold;'),span(' will be indicated in the '),span('Controls',style = 'font-weight: bold;'),
+                     span(' panel on the right after running. For more details, see the ',span('Instructions',style = 'font-weight: bold;'),span(' in the left sidebar menu.'))))
         }else{
-            shinyjs::enable("checkbox2")
-            shinyjs::enable("checkbox3")
+            enable("checkbox2")
+            enable("checkbox3")
         }
     })
 
@@ -540,7 +544,6 @@ server <- function(input, output, session) {
     },height=500,width=550)
     
     #### TAB 2 - Tables
-    # output$param_sum <- renderUI({
     output$param_sum <- renderPlot({
         m <- rc_model()
         param <- get_param_names(class(m),m$run_info$c_param)
@@ -571,6 +574,10 @@ server <- function(input, output, session) {
         grid.arrange(grobs=tgt, ncol=1)
     })
     
+    output$rc_table_ui <- renderUI({
+        plotOutput('rc_table',height=tabular_rating_curve_height$height*22,width = 2000) 
+    })
+    
     
     #### TAB 3 - Convergence diagnostics
     output$conv_diag1 <- renderPlot({
@@ -580,18 +587,6 @@ server <- function(input, output, session) {
         autoplot(rc_model(), type='autocorrelation', title='')
     },height = 400,width = 550)
     
-    
-    ### Download Report ###
-    # output$downloadReport <- downloadHandler(
-    #     filename <- function(){'bdrc_report.pdf'},
-    #     content <- function(file) {
-    #         pdf(file=file,paper='a4',width=9,height=11)
-    #         grid.arrange(page1_revised,as.table=TRUE)
-    #         for(i in 2:length(report_pages) ) grid.arrange(report_pages[[i]],as.table=TRUE)
-    #         invisible(dev.off())
-    #         file.copy("bdrc_report.pdf", file)
-    #     }
-    # )
     
     my_report_1 <- reactive({
         m <- rc_model()
@@ -689,9 +684,6 @@ server <- function(input, output, session) {
         y_px <- 400
         point <- nearPoints(dat, hover,xvar='Q',yvar='W', threshold = 5, maxpoints = 1)
         if (nrow(point) == 0) return(NULL)
-
-        # style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(245, 245, 245, 0.85); ",
-        #                 "left:", x_px-0.42*x_px, "px; top:", y_px-0.28*y_px, "px;")
         style <- paste0("position:absolute; z-index:100; pointer-events:none; background-color: rgba(255, 255, 255, 1); ",
                         "left:", x_px-0.42*x_px, "px; top:", y_px-0.28*y_px, "px;")
         
@@ -716,10 +708,16 @@ server <- function(input, output, session) {
         force$Q=NULL
         exclude_point$W <- NULL
         exclude_point$Q <- NULL
+        temp_exclude_point$W <- NULL
+        temp_exclude_point$Q <- NULL
     })
     
 
     
 }
 
+
+
 shinyApp(ui, server)
+
+

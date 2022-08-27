@@ -143,6 +143,8 @@ shiny_get_residuals_dat <- function(m){
     resid_dat$r_median <- log(resid_dat$Q)-log(resid_dat$rc_median)
     resid_dat$r_lower <- log(resid_dat$rc_lower)-log(resid_dat$rc_median)
     resid_dat$r_upper <- log(resid_dat$rc_upper)-log(resid_dat$rc_median)
+    resid_dat$m_lower <- log(resid_dat$rcm_lower)-log(resid_dat$rcm_median)
+    resid_dat$m_upper <- log(resid_dat$rcm_upper)-log(resid_dat$rcm_median)
     return(resid_dat)
 }
 

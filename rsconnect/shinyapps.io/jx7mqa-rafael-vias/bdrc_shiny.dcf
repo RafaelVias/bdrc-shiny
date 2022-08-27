@@ -1,0 +1,13 @@
+name: bdrc_shiny
+title: bdrc_shiny
+username:
+account: jx7mqa-rafael-vias
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6859180
+bundleId: 6242574
+url: https://rafael-vias.shinyapps.io/bdrc_shiny/
+when: 1661565546.27419
+lastSyncTime: 1661565546.2742
+asMultiple: FALSE
+asStatic: FALSE
