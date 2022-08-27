@@ -272,6 +272,8 @@ ui <- shinyUI(fluidPage(
                                                                                                  icon('eraser',style="color: dodgerblue")),
                                                                                     ),
                                                                    width=12),
+                                                               #br(),br(),
+                                                               #downloadReportUI(id = 'downloadReport'),
                                                                br(),br(),
                                                                downloadTableUI(id = "xlsxexport"),
                                                            )
