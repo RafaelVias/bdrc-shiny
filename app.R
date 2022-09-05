@@ -29,11 +29,6 @@ js_button <- 'a.btn {
     color: #000000;
 }"'
 js_background <- ".content {background-color: #FFFFFF;}"
-tab1_style <- '#tab1_head {font-size:20px; color:black; ;display:block; }'
-tab2_style <- '#tab2_head {font-size:20px; color:black; ;display:block; }'
-rc_head_style <- '#rc_head {font-size:20px; color:black; ;display:block; }'
-rhat_head_style <- '#rhat_head {font-size:20px; color:black; ;display:block; }'
-auto_head_style <- '#auto_head {font-size:20px; color:black; ;display:block; }'
 m_item <- ".sidebar-menu li a { font-size: 15px; }"
 
 rmdfiles <- c('Method.Rmd','Instructions.Rmd','Bugs.Rmd')
@@ -45,10 +40,10 @@ downloadTableUI <- function(id) {
     downloadButton(ns("table_download"), label = "Download excel tables")
 }
 
-downloadReportUI <- function(id) {
-    ns <- NS(id)
-    downloadButton(ns("report_download"), label = "Download report")
-}
+# downloadReportUI <- function(id) {
+#     ns <- NS(id)
+#     downloadButton(ns("report_download"), label = "Download report")
+# }
 
 
 downloadTable <- function(input, output, session, data) {
@@ -64,21 +59,21 @@ downloadTable <- function(input, output, session, data) {
     
 }
 
-downloadReport <- function(input, output, session, page_one, remaining_pages ) {
-    
-    output$report_download <- downloadHandler(
-        filename = function() {
-            paste("bdrc_report_", Sys.Date(), ".pdf", sep="")
-        },
-        content = function(file) {
-            pdf(file=file,paper='a4',width=9,height=11)
-            grid.arrange(page_one(),as.table=TRUE)
-            for(i in 2:length(remaining_pages()) ) grid.arrange(remaining_pages()[[i]],as.table=TRUE)
-            invisible(dev.off())
-        }
-    )
-    
-}
+# downloadReport <- function(input, output, session, page_one, remaining_pages ) {
+#     
+#     output$report_download <- downloadHandler(
+#         filename = function() {
+#             paste("bdrc_report_", Sys.Date(), ".pdf", sep="")
+#         },
+#         content = function(file) {
+#             pdf(file=file,paper='a4',width=9,height=11)
+#             grid.arrange(page_one(),as.table=TRUE)
+#             for(i in 2:length(remaining_pages()) ) grid.arrange(remaining_pages()[[i]],as.table=TRUE)
+#             invisible(dev.off())
+#         }
+#     )
+#     
+# }
 
 ui <- shinyUI(fluidPage(
         tags$head(tags$link(rel="shortcut icon", href="logo_nbg.png")),
@@ -124,12 +119,6 @@ ui <- shinyUI(fluidPage(
                                     tags$style(js_box),
                                     tags$style(js_button),
                                     tags$style(js_background),
-                                    tags$style(tab1_style),
-                                    tags$style(tab2_style),
-                                    tags$style(m_item),
-                                    tags$style(rhat_head_style),
-                                    tags$style(auto_head_style),
-                                    tags$style(rc_head_style),
                                     tabItems(
                                         tabItem(tabName="app",
                                                 fluidRow(
@@ -234,7 +223,7 @@ ui <- shinyUI(fluidPage(
                                                            
                                                     ),
                                                     column(width=4,
-                                                           actionButton(inputId = "hide_controls", label = "Hide Controls",icon('eye-slash') ),
+                                                           actionButton(inputId = "hide_controls", label = "Hide controls",icon('eye-slash') ),
                                                            br(),br(),
                                                            box(id = "controls",
                                                                status="primary", width = NULL,
@@ -253,7 +242,7 @@ ui <- shinyUI(fluidPage(
                                                                br(),br(),br(),
                                                                box(radioButtons(inputId="checkbox2", label="Rating curve type",choices=list("Generalized power law"='gen',"Power law"='trad'),selected="gen"),
                                                                    radioButtons(inputId="checkbox3", label="Error variance",choices=list("Varying with water elevation" = 'vary',"Constant" = 'const'),selected='vary'),
-                                                                   checkboxInput("tournament", label=span('Calculate best rating curve',style='font-weight: bold;'), value=FALSE),
+                                                                   checkboxInput("tournament", label=span('Select best model',style='font-weight: bold;'), value=FALSE),
                                                                    width = 12),
                                                                br(),
                                                                box(checkboxInput("advanced", label=span('Advanced settings',style='font-weight: bold;'), value=FALSE),
@@ -319,47 +308,65 @@ server <- function(input, output, session) {
         shinyjs::toggle("controls")
     })
     
-    ## data import ##
-    data <- eventReactive(input$go,{
+    observeEvent(input$go, {
         if(is.null(input$file)){
-            message_fun(title="Whoops!",text="Please upload data in order to fit a rating curve.")
-            stop()
-        }else{
-            upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
-            for (i in c('dummy','force','exclude_point')) assign( i, upd_pts[[i]] ) 
-            h_max <- upd_pts$h_max
-            
-            cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
-                            advanced=input$advanced,exclude=input$exclude,
-                            excludedates=input$excludeDates, includedates=input$includeDates,
-                            h_max=as.numeric(input$h_max))
-            if(length(vals$keeprows)==0 ){
-                vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
-            }
-            years <- as.numeric(format(cleandata$observedData_before$Date, "%Y"))
-            includeindex <- years<=input$includeDates[2] & years >= input$includeDates[1]
-            excludeindex <- cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
-            daterange$keeprows <- excludeindex & includeindex
-            above_hmax$logical <- if(is.na(h_max)) rep(F,nrow(cleandata$observedData_before)) else ( cleandata$observedData_before$W > h_max )
-            
-            if(nrow(cleandata$wq) < 3){
-                message_fun(title="Whoops!",text='There are less than 3 data points. Cannot fit rating curve.')
-                stop()
-            }
-            return(cleandata)
+            message_fun(title="Whoops!",text="Please upload excel file in order to fit a rating curve!")
         }
     })
     
+    ## data import ##
+    data <- eventReactive(input$go,{
+        
+        validate(
+            need(!is.null(input$file), "")
+        )
+        
+        upd_pts <- update_interactive_points( reactiveValuesToList(input_h_max)$W, reactiveValuesToList(dummy), reactiveValuesToList(force), reactiveValuesToList(exclude_point))
+        for (i in c('dummy','force','exclude_point')) assign( i, upd_pts[[i]] ) 
+        h_max <- upd_pts$h_max
+        
+        cleandata=clean(input$file,dummy=dummy,force=force,keeprows=vals$keeprows,
+                        advanced=input$advanced,exclude=input$exclude,
+                        excludedates=input$excludeDates, includedates=input$includeDates,
+                        h_max=as.numeric(input$h_max))
+        if(length(vals$keeprows)==0 ){
+            vals$keeprows= rep(TRUE,nrow(cleandata$observedData_before))
+        }
+        years <- as.numeric(format(cleandata$observedData_before$Date, "%Y"))
+        includeindex <- years<=input$includeDates[2] & years >= input$includeDates[1]
+        excludeindex <- cleandata$observedData_before$Date<=input$excludeDates[1] | cleandata$observedData_before$Date >= input$excludeDates[2]
+        daterange$keeprows <- excludeindex & includeindex
+        above_hmax$logical <- if(is.na(h_max)) rep(F,nrow(cleandata$observedData_before)) else ( cleandata$observedData_before$W > h_max )
+        
+        if(nrow(cleandata$wq) < 3){
+            message_fun(title="Whoops!",text='There are less than 3 data points. Cannot fit rating curve.')
+            stop()
+        }
+        return(cleandata)
+        
+    })
+    
     observeEvent(input$go,{
+    
+        validate(
+            need(!is.null(input$file), "")
+        )
+        
         input_h_max$W <- c(as.numeric(input$h_max))
         temp_exclude_point$W <- NULL
         temp_exclude_point$Q <- NULL
         param_sum_height$height <- nrow(rc_model()$param_summary)
         tabular_rating_curve_height$height <- max(ceiling(max(rc_model()$rating_curve$h)*10),input_h_max$W,na.rm=T) - floor(min(rc_model()$rating_curve$h)*10)
+    
     })
     
     ## run Models ##
     rc_model <- eventReactive(input$go,{
+
+        validate(
+            need(!is.null(input$file), "")
+        )
+    
         if(input$tournament){
             m <- 'tournament'
         }else{
@@ -393,6 +400,7 @@ server <- function(input, output, session) {
             rc.fit <- rc_fun( Q~W, c_param=c_parameter, h_max=h_max, data=dat, forcepoint=data()$observedData$Quality=='forcepoint')
         }
         return(rc.fit)
+        
     })
     
     ### create rating curve plot ###
@@ -491,8 +499,7 @@ server <- function(input, output, session) {
     
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(input_h_max$W)
-    #     print(tabular_rating_curve_height$height)
+    #     print(is.null(input$file))
     # })
     # # #############################
     
@@ -512,28 +519,6 @@ server <- function(input, output, session) {
         }
     })
 
-    
-    ## create headers ##
-    headers <- eventReactive(input$go,{
-        head_list <- list()
-        head_list$tab1_head <- paste('Parameter summary table')
-        head_list$tab2_head <- paste('Tabular rating curve')
-        head_list$rhat_head <- paste('Gelman-Rubin statistic')
-        head_list$auto_head <- paste('Autocorrelation in posterior draws')
-        return(head_list)
-    })
-    output$tab1_head <- renderText({
-        headers()$tab1_head
-    })
-    output$tab2_head <- renderText({
-        headers()$tab2_head
-    })
-    output$rhat_head <- renderText({
-        headers()$rhat_head
-    })
-    output$auto_head <- renderText({
-        headers()$auto_head
-    })
     
     #### TAB 1 - Figures
     output$rc_fig <- renderPlot({
@@ -590,34 +575,34 @@ server <- function(input, output, session) {
     },height = 400,width = 550)
     
     
-    my_report_1 <- reactive({
-        m <- rc_model()
-        report_pages <- get_report_pages(m)
-        rating_curve_plot <- create_rc_fig() + ggtitle('Rating curve')
-        panel_plot <- arrangeGrob(rating_curve_plot,create_rc_panel()$resid,
-                                  create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
-        param <- get_param_names(class(m),m$run_info$c_param)
-        table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
-        names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
-        row.names(table) <- c(sapply(param,function(x) shiny_get_param_expression(x,latex=FALSE)),"Deviance")
-        table <- format(round(table,digits=3),nsmall=3)
-        table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
-        refined_first_page <- arrangeGrob(panel_plot,
-                                          table_grob,
-                                          nrow=2,
-                                          as.table=TRUE,
-                                          heights=c(5,3),
-                                          top=textGrob(paste0('Model type: ',class(m)),gp=gpar(fontsize=18,facetype='bold')))
-        refined_first_page
-    })
-    
-    my_report_2 <- reactive({
-        m <- rc_model()
-        report_pages <- get_report_pages(m)
-        report_pages
-    })
-    
-    callModule(downloadReport, id = "downloadReport", page_one = my_report_1,  remaining_pages = my_report_2)
+    # my_report_1 <- reactive({
+    #     m <- rc_model()
+    #     report_pages <- get_report_pages(m)
+    #     rating_curve_plot <- create_rc_fig() + ggtitle('Rating curve')
+    #     panel_plot <- arrangeGrob(rating_curve_plot,create_rc_panel()$resid,
+    #                               create_rc_panel()$f_h,create_rc_panel()$sigma_eps)
+    #     param <- get_param_names(class(m),m$run_info$c_param)
+    #     table <- rbind(m$param_summary[,c('lower','median','upper')],c(m$Deviance_summary))
+    #     names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
+    #     row.names(table) <- c(sapply(param,function(x) shiny_get_param_expression(x,latex=FALSE)),"Deviance")
+    #     table <- format(round(table,digits=3),nsmall=3)
+    #     table_grob <- tableGrob(table,theme=ttheme_minimal(rowhead=list(fg_params=list(parse=TRUE))))
+    #     refined_first_page <- arrangeGrob(panel_plot,
+    #                                       table_grob,
+    #                                       nrow=2,
+    #                                       as.table=TRUE,
+    #                                       heights=c(5,3),
+    #                                       top=textGrob(paste0('Model type: ',class(m)),gp=gpar(fontsize=18,facetype='bold')))
+    #     refined_first_page
+    # })
+    # 
+    # my_report_2 <- reactive({
+    #     m <- rc_model()
+    #     report_pages <- get_report_pages(m)
+    #     report_pages
+    # })
+    # 
+    # callModule(downloadReport, id = "downloadReport", page_one = my_report_1,  remaining_pages = my_report_2)
     
     
     my_table <- reactive({
@@ -714,10 +699,7 @@ server <- function(input, output, session) {
         temp_exclude_point$Q <- NULL
     })
     
-
-    
 }
-
 
 
 shinyApp(ui, server)
