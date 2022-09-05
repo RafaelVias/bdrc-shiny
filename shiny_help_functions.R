@@ -31,17 +31,17 @@ shiny_get_param_expression <- function(param,latex=TRUE){
                       'z_1'='z_{1}','z_2'='z_{2}','z_3'='z_{3}',
                       'z_4'='z_{4}','z_5'='z_{5}','z_6'='z_{6}')
     }else{
-        expr_vec <- c('a'='a','b'='b','c'='c','sigma_eps'='sigma[epsilon]',
-                      'sigma_beta'='sigma[beta]','phi_beta'='phi[beta]',
-                      'sigma_eta'='sigma[eta]','eta_1'='eta[1]','eta_2'='eta[2]',
-                      'eta_3'='eta[3]','eta_4'='eta[4]','eta_5'='eta[5]',
-                      'eta_6'='eta[6]','log(a)'='log(a)','log(h_min-c)'='log(h[min]-c)',
-                      '2log(sigma_eps)'='log(sigma[epsilon]^2)',
-                      'log(sigma_beta)'='log(sigma[beta])',
-                      'log(phi_beta)'='log(phi[beta])',
-                      'log(sigma_eta)'='log(sigma[eta])',
-                      'z_1'='z[1]','z_2'='z[2]','z_3'='z[3]',
-                      'z_4'='z[4]','z_5'='z[5]','z_6'='z[6]')
+        expr_vec <- c('a'='a','b'='b','c'='c','sigma_eps'='sigma[phantom(x)*epsilon]',
+                      'sigma_beta'='sigma[phantom(x)*beta]','phi_beta'='phi[phantom(x)*beta]',
+                      'sigma_eta'='sigma[phantom(x)*eta]','eta_1'='eta[phantom(x)*1]','eta_2'='eta[phantom(x)*2]',
+                      'eta_3'='eta[phantom(x)*3]','eta_4'='eta[phantom(x)*4]','eta_5'='eta[phantom(x)*5]',
+                      'eta_6'='eta[phantom(x)*6]','log(a)'='log(a)','log(h_min-c)'='log(h[phantom(x)*min]-c)',
+                      '2log(sigma_eps)'='log(sigma[phantom(x)*epsilon]^2)',
+                      'log(sigma_beta)'='log(sigma[phantom(x)*beta])',
+                      'log(phi_beta)'='log(phi[phantom(x)*beta])',
+                      'log(sigma_eta)'='log(sigma[phantom(x)*eta])',
+                      'z_1'='z[phantom(x)*1]','z_2'='z[phantom(x)*2]','z_3'='z[phantom(x)*3]',
+                      'z_4'='z[phantom(x)*4]','z_5'='z[phantom(x)*5]','z_6'='z[phantom(x)*6]')
     }
     param_expr <- expr_vec[param]
     if(any(is.na(param_expr))){

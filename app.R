@@ -499,7 +499,10 @@ server <- function(input, output, session) {
     
     # # ########## DEBUGGER ##########
     # output$debug <- renderPrint({
-    #     print(is.null(input$file))
+    #     print(class(rc_model()))
+    #     print(rc_model()$run_info$c_param)
+    #     print(get_param_names(class(rc_model()),rc_model()$run_info$c_param))
+    #     print(parse(text=shiny_get_param_expression(get_param_names(class(rc_model()),rc_model()$run_info$c_param),latex=FALSE)))
     # })
     # # #############################
     
@@ -527,7 +530,7 @@ server <- function(input, output, session) {
     
     output$rc_panel <- renderPlot({
         grid.arrange(create_rc_panel()$trans_rc,create_rc_panel()$resid,
-                     create_rc_panel()$f_h,create_rc_panel()$sigma_eps, ncol=2)
+                     create_rc_panel()$f_h,create_rc_panel()$sigma_eps+ylab(expression(sigma[phantom(x)*epsilon])), ncol=2)
     },height=500,width=550)
     
     #### TAB 2 - Tables
@@ -536,7 +539,7 @@ server <- function(input, output, session) {
         param <- get_param_names(class(m),m$run_info$c_param)
         table <- m$param_summary[,c('lower','median','upper')]
         names(table) <- paste0(names(table),c('-2.5%','-50%','-97.5%'))
-        row.names(table) <- sapply(param,function(x) paste0("italic(",shiny_get_param_expression(x,latex=FALSE),")") )
+        row.names(table) <- sapply(param,function(x) paste0("italic(",shiny_get_param_expression(x,latex=FALSE),"*phantom(x))") )
         table <- format(round(table,digits=3),nsmall=3)
         tg <- list(tableGrob(table,
                              theme=ttheme_minimal(core=list(bg_params = list(fill = c("#F7FBFF","#DEEBF7"), col=NA),fg_params=list(fontface=3)),
@@ -567,11 +570,14 @@ server <- function(input, output, session) {
     
     
     #### TAB 3 - Convergence diagnostics
+    color_palette <- c("green","red","slateblue1","hotpink","#56B4E9","#E69F00","#000000","#999999","#CC79A7","#D55E00","#0072B2","#009E73")
+    
     output$conv_diag1 <- renderPlot({
-        autoplot(rc_model(), type='r_hat', title='') 
+        autoplot(rc_model(), type='r_hat', title='') + scale_color_manual(values=color_palette,name=class(rc_model()),labels = parse(text=shiny_get_param_expression(get_param_names(class(rc_model()),rc_model()$run_info$c_param),latex=FALSE)))
     },height = 400,width = 550)
+    
     output$conv_diag2 <- renderPlot({
-        autoplot(rc_model(), type='autocorrelation', title='')
+        autoplot(rc_model(), type='autocorrelation', title='') + scale_color_manual(values=color_palette,name=class(rc_model()),labels = parse(text=shiny_get_param_expression(get_param_names(class(rc_model()),rc_model()$run_info$c_param),latex=FALSE)))
     },height = 400,width = 550)
     
     
