@@ -13,9 +13,11 @@ knitr::opts_chunk$set(
 )
 ```
 
-## How to use the app?
+# Instructions - How to use the app?
 
-This Shiny application can be used to generate a discharge rating curve from paired observations of water elevation (stage) and discharge. To start the data must be uploaded.
+This Shiny application can be used to generate a discharge rating curve from paired observations of water elevation (stage) and discharge. 
+<br /> 
+To start, the data must be uploaded.
 
 <br />
 
